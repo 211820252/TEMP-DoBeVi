@@ -75,10 +75,14 @@ class Prover(ABC):
         self.result_save_path = result_save_path
 
     @abstractmethod
-    async def search(self, thm: TracedTheorem) -> Optional[SearchResult]:
+    async def search(self, thm: TracedTheorem) -> None:
         """
         Search for a proof of a theorem.
         """
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         raise NotImplementedError
     
     def select_tac_gen(self) -> TacticGenerator:
@@ -146,7 +150,7 @@ class ProverActor:
                 break
 
             try:
-                result = await asyncio.wait_for(
+                await asyncio.wait_for(
                     self.prover.search(thm),
                     timeout=self.search_timeout,
                 )
@@ -155,13 +159,27 @@ class ProverActor:
                     f"🚨[Actor {self.actor_id}] search({thm.name!r}) timed-out "
                     f"after {self.search_timeout}s"
                 )
-                result = None
             except Exception:
                 logging.error(
                     f"🚨[Actor {self.actor_id}] unexpected error in search({thm.name!r})"
                 )
+
+            try:
+                result = await asyncio.wait_for(
+                    self.prover.get_result(),
+                    timeout=60
+                )
+            except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+                logging.error(
+                    f"🚨[Actor {self.actor_id}] encountered a timeout while retrieving the search result for theorem '{thm.name}' after 60s."
+                )
                 result = None
-            
+            except Exception as e:
+                logging.error(
+                    f"🚨[Actor {self.actor_id}] encountered a error while retrieving the search result for theorem '{thm.name}': {e}"
+                )
+                result = None
+
             try:
                 output_queue.put(result)
             except Exception:

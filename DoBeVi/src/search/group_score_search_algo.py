@@ -51,7 +51,7 @@ class GroupScoreSearchProver(Prover):
     ):
         super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
 
-    async def search(self, thm: TracedTheorem) -> Optional[SearchResult]:
+    async def search(self, thm: TracedTheorem) -> None:
         """
         Search for a proof of a theorem using best-first search.
         """
@@ -96,48 +96,15 @@ class GroupScoreSearchProver(Prover):
                 torch.cuda.empty_cache()
             except DojoCrashError as e:
                 logging.error(f"🚨{e}")
-
-            # check if the search was successful
-            if self.root.status == Status.SOLVED:
-                proof = [e.tactic for e in await asyncio.to_thread(self.root.extract_proof)]
-                self.success_edges = await asyncio.to_thread(collect_success_edges, self.root)
-            else:
-                proof = None
-
-            await asyncio.to_thread(
-                visualize_proof_tree,
-                list(self.nodes.values()),
-                self.success_edges, 
-                self.back_edges,
-                self.result_save_path + "/visual",
-                self.thm.name,
-                ['simple','detail']
-            )
-
-            # box the result
-            result = SearchResult(
-                theorem=thm,
-                status=self.root.status,
-                proof=proof,
-                num_total_nodes=len(self.nodes),
-                num_expansions=self.num_expansions,
-                elapsed_time=self.elapsed_time,
-                dojo_elapsed_time=self.dojo_elapsed_time,
-                model_elapsed_time=self.model_elapsed_time,
-            )
-
-            return result
         
         except (asyncio.TimeoutError, asyncio.CancelledError):
             raise
 
         except DojoInitError as e:
             logging.error(f"🚨Failed to initialize Dojo: {e}")
-            return None
         
         except Exception as e:
             logging.error(f"🚨{type(e).__name__}: {e}")
-            return None
         
         finally: 
             if hasattr(self, "dojo"):
@@ -295,3 +262,40 @@ class GroupScoreSearchProver(Prover):
             (tactic, score, exp_score / total)
             for (tactic, score), exp_score in zip(suggestions, exps)
         ]
+    
+    async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
+        if not self.thm or not self.root:
+            return None
+        
+        # check if the search was successful
+        if self.root.status == Status.SOLVED:
+            proof = [e.tactic for e in await asyncio.to_thread(self.root.extract_proof)]
+            if visualize:
+                self.success_edges = await asyncio.to_thread(collect_success_edges, self.root)
+        else:
+            proof = None
+        
+        if visualize:
+            await asyncio.to_thread(
+                visualize_proof_tree,
+                list(self.nodes.values()),
+                self.success_edges, 
+                self.back_edges,
+                self.result_save_path + "/visual",
+                self.thm.name,
+                ['simple','detail']
+            )
+
+        # box the result
+        result = SearchResult(
+            theorem=self.thm,
+            status=self.root.status,
+            proof=proof,
+            num_total_nodes=len(self.nodes),
+            num_expansions=self.num_expansions,
+            elapsed_time=self.elapsed_time,
+            dojo_elapsed_time=self.dojo_elapsed_time,
+            model_elapsed_time=self.model_elapsed_time,
+        )
+
+        return result

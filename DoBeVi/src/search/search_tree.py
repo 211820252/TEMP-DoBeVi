@@ -170,7 +170,6 @@ class UnsolvedNode(Node):
         return False
     
 
-
 @dataclass(eq=False)
 class Edge:
     """

@@ -1,6 +1,6 @@
 import os
 os.environ['RAY_TEMP_DIR'] = '/data0/zjk/ATP/TEMP-DoBeVi/ray_cache'
-os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['RAY_DEDUP_LOGS'] = '0' 
 os.environ['RAY_memory_monitor_refresh_ms'] = '0'
