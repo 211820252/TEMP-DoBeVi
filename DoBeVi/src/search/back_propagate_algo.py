@@ -318,7 +318,7 @@ class BackPropagateProver(Prover):
         invalid = sum(isinstance(edge.dst, InvalidNode) for edge in out_edges)
         ratio = invalid / total
 
-        if ratio > 0.8:
+        if ratio > 0.5:
             self._back_propagate(search_node, 0.5)
 
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:

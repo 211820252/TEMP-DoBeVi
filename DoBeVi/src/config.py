@@ -8,11 +8,11 @@ class Settings(BaseSettings):
     REPO_PATH: str = Field('/absolute/path/to/lean/repo', description="Absolute path to the Lean project repo")
     FILE_PATHS: List[str] = Field(
         default_factory=lambda: ['relative/path/to/lean/file'],
-        description="Single or multiple relative paths to the Lean theorem file"
+        description="Single or multiple relative paths to Lean files/directories (relative to REPO_PATH, excludes .lake/)"
     )
     MODEL_PATH: str = Field('path/to/model', description="Path to the LLM or HuggingFace model")
     ALGORITHM: str = Field('best_first', description="Search algorithm to use")
-    NUM_WORKERS: int = Field(2, description="Number of concurrent worker processes")
+    NUM_WORKERS: int = Field(8, description="Number of concurrent worker processes")
     NUM_GPUS: int = Field(1, description="Number of GPUs to use")
     NUM_SAMPLED_TACTICS: int = Field(4, description="Number of tactics to sample at each step")
     SEARCH_TIMEOUT: int = Field(1800, description="Time limit for the proof search process")
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     @field_validator("NUM_WORKERS", mode="before")
     @classmethod
     def validate_num_workers(cls, v):
-        return 2 if v == "" else int(v) 
+        return 8 if v == "" else int(v) 
 
     @field_validator("NUM_GPUS", mode="before")
     @classmethod
