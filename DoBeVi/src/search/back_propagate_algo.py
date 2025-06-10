@@ -4,8 +4,7 @@ import time
 from typing import List, Optional, Tuple
 import torch
 import math
-
-from config import settings
+import queue
 
 from dojo import (
     TracedTheorem,
@@ -41,7 +40,7 @@ from search.visual import (
     visualize_proof_tree,
 )
 
-class BestFirstSearchProver(Prover):
+class BackPropagateProver(Prover):
     def __init__(
         self,
         tactic_generators: List[TacticGenerator],
@@ -49,24 +48,17 @@ class BestFirstSearchProver(Prover):
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
+        result_save_path: str,
     ):
-        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics)
+        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
 
     async def search(self, thm: TracedTheorem) -> Optional[SearchResult]:
         """
         Search for a proof of a theorem using best-first search.
         """
+        self._prepare()
+
         self.thm = thm
-        
-        self.leandojo_tactic_timeout = 20
-        self.leandojo_num_threads = 1
-        self.leandojo_memory_limit = 32
-
-        self.dojo_elapsed_time = 0.0
-        self.model_elapsed_time = 0.0
-
-        self.num_expansions = 0
-        self.elapsed_time = 0
 
         try:
             # initialize the current root node
@@ -86,7 +78,8 @@ class BestFirstSearchProver(Prover):
                 priority=0.0, 
                 depth=0,
             )
-            
+            self.root.penalty = 0.0
+
             self.nodes = {current_state.id: self.root}
             self.back_edges = []
             self.success_edges = []
@@ -112,7 +105,7 @@ class BestFirstSearchProver(Prover):
                 list(self.nodes.values()),
                 self.success_edges, 
                 self.back_edges,
-                settings.RESULT_SAVE_PATH + "/visual",
+                self.result_save_path + "/visual",
                 self.thm.name,
                 ['simple','detail']
             )
@@ -148,15 +141,10 @@ class BestFirstSearchProver(Prover):
             
     async def _best_first_search(self) -> None:
         start_time = time.time()
-        priority_queue = asyncio.PriorityQueue() # lowest priority first
-        priority_queue.put_nowait((-self.root.priority, self.root))
 
         while True:
-            if priority_queue.empty():
-                logging.info("Search queue is empty.")
-                break
             try:
-                await self._step(priority_queue)
+                await self._step()
             except (asyncio.TimeoutError, asyncio.CancelledError, DojoCrashError):
                 raise
             except Exception as e:
@@ -178,8 +166,8 @@ class BestFirstSearchProver(Prover):
                 logging.info("Search complete: proof found.")
                 break
 
-    async def _step(self, priority_queue: asyncio.PriorityQueue[Tuple[float, UnsolvedNode]]) -> None:
-        _, search_node = priority_queue.get_nowait()
+    async def _step(self) -> None:
+        search_node = self._get_expansion_node()
         
         logging.info(f"Expanding node: {search_node}")
 
@@ -198,7 +186,7 @@ class BestFirstSearchProver(Prover):
         
         for tactic, score, norm_score in normalized_suggestions:
             edge, proof_finished = await self._run_tactic(
-                search_node, tactic, score, norm_score, priority_queue
+                search_node, tactic, score, norm_score
             )
             
             if edge is not None:
@@ -207,10 +195,11 @@ class BestFirstSearchProver(Prover):
             if proof_finished:
                 break
         
+        self._apply_penalty(results, search_node)
+
         # expand the search node
         search_node.out_edges = results
         self.num_expansions += 1
-        priority_queue.task_done()
 
     @torch.no_grad()
     async def _generate_tactics(self, tactic_state_str: str) -> List[Tuple[str, float]]:
@@ -233,7 +222,6 @@ class BestFirstSearchProver(Prover):
         tactic: str, 
         score: float, 
         norm_score: float,
-        priority_queue: asyncio.PriorityQueue
     ) -> Tuple[Optional[Edge], bool]:
         # run tactic in Lean server
         start_time = time.time()
@@ -262,18 +250,19 @@ class BestFirstSearchProver(Prover):
                     priority=search_node.priority + score,
                     depth=depth,
                 )
-                priority_queue.put_nowait((-child_node.priority, child_node))
+                child_node.penalty = 0.0
             self.nodes[leandojo_new_state.id] = child_node
-            edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=norm_score)
+            edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
         else: 
             assert isinstance(leandojo_new_state, TacticState), f"Expected TacticState, got{type(leandojo_new_state)}"
             child_node = self.nodes[leandojo_new_state.id]
+
             assert isinstance(child_node, UnsolvedNode), f"Expected UnsolvedNode, got {type(child_node)}"
             child_node.depth = min(child_node.depth, depth)
             if await asyncio.to_thread(child_node.is_descendant, search_node):
                 edge = None
             else:
-                edge = Edge(src=search_node, dst=child_node, tactic=tactic,score=norm_score)
+                edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
                 self.back_edges.append(edge)
 
         if isinstance(child_node, UnsolvedNode) and edge is not None:
@@ -303,3 +292,58 @@ class BestFirstSearchProver(Prover):
             for (tactic, score), exp_score in zip(suggestions, exps)
         ]
 
+    def _get_expansion_node(self) -> Optional[UnsolvedNode]:
+        try:
+            ans: Optional[UnsolvedNode] = None
+
+            q = queue.Queue()
+            q.put(self.root, block=False)
+
+            while not q.empty():
+                u = q.get(block=False)
+                assert isinstance(u, UnsolvedNode), f"Expected UnsolvedNode, got '{type(u)}'"
+                if not u.out_edges:
+                    if not ans or u.priority > ans.priority:
+                        ans = u
+                else:
+                    for out_edge in u.out_edges:
+                        v = out_edge.dst
+                        if isinstance(v, UnsolvedNode):
+                            if not hasattr(v, 'in_deg') or v.in_deg == 0:
+                                v.in_deg = len(v.in_edges)
+                                v.priority = u.priority + out_edge.score
+                            v.in_deg -= 1
+                            v.priority = max(v.priority, u.priority + out_edge.score)
+                            if v.in_deg == 0:
+                                v.priority -= v.penalty
+                                q.put(v, block=False)
+            
+            return ans
+        
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            raise
+
+        except Exception as e:
+            logging.error(f"🚨{type(e).__name__}: {e}")
+
+        return None
+    
+    def _back_propagate(self, v: UnsolvedNode, penalty_value: float) -> None:
+        assert hasattr(v, 'penalty')
+        for in_egde in v.in_edges:
+            u = in_egde.src
+            assert isinstance(u, UnsolvedNode), f"Expected UnsolvedNode, got '{type(u)}'"
+            assert hasattr(u, 'penalty')
+            u.penalty += penalty_value
+
+    def _apply_penalty(self, out_edges: List[Edge], search_node: UnsolvedNode) -> None:
+        if not out_edges:
+            self._back_propagate(search_node, 0.5)
+            return
+
+        total = len(out_edges)
+        invalid = sum(isinstance(edge.dst, InvalidNode) for edge in out_edges)
+        ratio = invalid / total
+
+        if ratio > 0.8:
+            self._back_propagate(search_node, 0.5)

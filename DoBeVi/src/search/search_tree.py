@@ -180,6 +180,7 @@ class Edge:
     dst: Node = field(repr=False)
     tactic: str
     score: float
+    norm_score: float
 
     def distance_to_proof(self) -> float:
         return 1 + self.dst.distance_to_proof

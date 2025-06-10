@@ -65,12 +65,14 @@ class Prover(ABC):
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
+        result_save_path: str,
     ):
         self.tactic_generators = tactic_generators
         self.prover_id = prover_id
         self.search_timeout = search_timeout
         self.max_expansions = max_expansions
         self.num_sampled_tactics = num_sampled_tactics
+        self.result_save_path = result_save_path
 
     @abstractmethod
     async def search(self, thm: TracedTheorem) -> Optional[SearchResult]:
@@ -83,6 +85,25 @@ class Prover(ABC):
         # TODO: implement polling strategy in the future
         return self.tactic_generators[self.prover_id % len(self.tactic_generators)] 
 
+    def _prepare(self) -> None:
+        self.thm = None
+        self.dojo = None
+        self.root = None
+
+        self.nodes = None
+        self.back_edges = None
+        self.success_edges = None
+
+        self.leandojo_tactic_timeout = 20
+        self.leandojo_num_threads = 1
+        self.leandojo_memory_limit = 32
+
+        self.dojo_elapsed_time = 0.0
+        self.model_elapsed_time = 0.0
+        self.elapsed_time = 0
+
+        self.num_expansions = 0
+
 @ray.remote
 class ProverActor:
     def __init__(
@@ -94,6 +115,7 @@ class ProverActor:
         num_sampled_tactics: int,
         search_timeout: int,
         queue_timeout: int,
+        result_save_path: str
     ):
         self.actor_id = actor_id
         self.tactic_generators = tactic_generators
@@ -106,6 +128,7 @@ class ProverActor:
             search_timeout=search_timeout,
             max_expansions=max_expansions,
             num_sampled_tactics=num_sampled_tactics,
+            result_save_path=result_save_path,
         )
 
     async def search(
@@ -154,6 +177,7 @@ class ProverScheduler:
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
+        result_save_path: str
     ):
         self.num_workers = num_workers
         self.num_gpus = num_gpus
@@ -196,6 +220,7 @@ class ProverScheduler:
                 num_sampled_tactics=num_sampled_tactics,
                 search_timeout=search_timeout,
                 queue_timeout=5,
+                result_save_path=result_save_path,
             )
             for i in range(num_workers)
         ]

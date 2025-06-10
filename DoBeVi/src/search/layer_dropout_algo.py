@@ -5,8 +5,6 @@ from typing import List, Optional, Tuple
 import torch
 import math
 
-from config import settings
-
 from dojo import (
     TracedTheorem,
     Dojo,
@@ -49,25 +47,18 @@ class LayerDropoutProver(Prover):
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
+        result_save_path: str,
     ):
-        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics)
+        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
 
     async def search(self, thm: TracedTheorem) -> Optional[SearchResult]:
         """
         Search for a proof of a theorem using best-first search.
         """
+        self._prepare()
+
         self.thm = thm
-
-        self.leandojo_tactic_timeout = 20
-        self.leandojo_num_threads = 1
-        self.leandojo_memory_limit = 32
-
-        self.dojo_elapsed_time = 0.0
-        self.model_elapsed_time = 0.0
-
-        self.num_expansions = 0
-        self.elapsed_time = 0
-
+        
         self.min_beam_size = 4  
         self.max_beam_size = self.num_sampled_tactics
 
@@ -114,7 +105,7 @@ class LayerDropoutProver(Prover):
                 list(self.nodes.values()),
                 self.success_edges, 
                 self.back_edges,
-                settings.RESULT_SAVE_PATH + "/visual",
+                self.result_save_path + "/visual",
                 self.thm.name,
                 ['simple','detail']
             )
@@ -277,7 +268,7 @@ class LayerDropoutProver(Prover):
                 )
                 priority_queue.put_nowait((-child_node.priority, child_node))
             self.nodes[leandojo_new_state.id] = child_node
-            edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=norm_score)
+            edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
         else:
             assert isinstance(leandojo_new_state, TacticState), f"Expected TacticState, got{type(leandojo_new_state)}"
             child_node = self.nodes[leandojo_new_state.id]
@@ -286,7 +277,7 @@ class LayerDropoutProver(Prover):
             if await asyncio.to_thread(child_node.is_descendant, search_node):
                 edge = None
             else:
-                edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=norm_score)
+                edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
                 self.back_edges.append(edge)
 
         if isinstance(child_node, UnsolvedNode) and edge is not None:

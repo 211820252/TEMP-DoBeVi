@@ -2,7 +2,6 @@ from graphviz import Digraph
 from collections import defaultdict
 from typing import List, Optional
 
-from config import settings
 from search.search_tree import Node, SolvedNode, InvalidNode, UnsolvedNode,Edge
 
 def split_text(text, max_len=30):
@@ -16,7 +15,7 @@ def visualize_proof_tree(
         node_list: List[Node],
         success_edge_list: Optional[List['Edge']] = None,
         backedge_list: Optional[List['Edge']] = None,
-        dir: str = settings.RESULT_SAVE_PATH + "/visual",
+        dir: str = "./visual",
         filename: str = "proof_search_tree",
         mode: List[str] = ["simple", "detail"],
     ):
@@ -93,7 +92,7 @@ def visualize_proof_tree(
                     dot.edge(
                         str(edge.src.id), 
                         str(edge.dst.id),
-                        label=f"{edge_tactic}\n{edge.score:.2f}",
+                        label=f"{edge_tactic}\n{edge.norm_score:.2f}",
                         color=edge_color, 
                         style=edge_style, 
                         penwidth=penwidth

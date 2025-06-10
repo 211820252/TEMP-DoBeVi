@@ -1,6 +1,6 @@
 import os
-os.environ['RAY_TEMP_DIR'] = '/path/to/ray_temp'
-os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"
+os.environ['RAY_TEMP_DIR'] = '/data0/zjk/ATP/TEMP-DoBeVi/ray_cache'
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['RAY_DEDUP_LOGS'] = '0' 
 os.environ['RAY_memory_monitor_refresh_ms'] = '0'
@@ -17,8 +17,7 @@ import time
 from config import settings
 from dojo import TracedRepo
 from search.search_tree import Status
-from search.search_algo import ProverScheduler, SearchResult
-from search.best_first_search_algo import BestFirstSearchProver
+from search.search_algo import ProverScheduler
 
 from utils import (
     get_num_gpus,
@@ -42,10 +41,12 @@ def evaluate(
     repo = TracedRepo(repo_path)
     theorems = []
     for file_path in file_paths:
-        theorems_dict = repo.get_traced_theorems_from_file(file_path, False)
+        theorems_dict = repo.get_traced_theorems_from_file(file_path, True)
         for thm_name, thms in theorems_dict.items():
             theorems.extend(thms)
     
+    result_save_path = result_save_path + "/" + f"results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     # create prover scheduler and search
     scheduler = ProverScheduler(
         model_path=model_path,
@@ -55,8 +56,10 @@ def evaluate(
         search_timeout=search_timeout,
         max_expansions=max_expansions,
         num_sampled_tactics=num_sampled_tactics,
+        result_save_path = result_save_path
     )
 
+    os.makedirs(result_save_path, exist_ok=True)
     time_start = time.time()
     results = scheduler.search(theorems)
     time_end = time.time()
@@ -76,7 +79,6 @@ def evaluate(
     else:
         pass_1 = num_solved / (num_solved + num_failed)
 
-    os.makedirs(result_save_path, exist_ok=True)
     result_file = os.path.join(result_save_path, f"results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
     with open(result_file, "w") as f:
         result_dict = {}
@@ -104,10 +106,53 @@ def evaluate(
     logging.info(f"Pass Num: {num_solved}")
     return pass_1
 
+def collect_lean_files(repo_path: str, input_paths: List[str]) -> List[str]:
+    repo = Path(repo_path).resolve()
+    result = set()
+
+    for raw_path in input_paths:
+        path = Path(raw_path)
+        full_path = path.resolve() if path.is_absolute() else (repo / path).resolve()
+
+        # ❗ Warn if path does not exist
+        if not full_path.exists():
+            logging.error(f"Path does not exist and was skipped: {raw_path}")
+            continue
+
+        # ❗ Warn if path is outside the repo
+        try:
+            full_path.relative_to(repo)
+        except ValueError:
+            logging.error(f"Path is outside the repository and was skipped: {raw_path}")
+            continue
+
+        # ✅ Single .lean file
+        if full_path.is_file() and full_path.suffix == ".lean":
+            rel = full_path.relative_to(repo)
+            if ".lake" in rel.parts:
+                continue
+            result.add(str(rel))
+
+        # ✅ Directory: recursively search for .lean files
+        elif full_path.is_dir():
+            for file in full_path.rglob("*.lean"):
+                try:
+                    rel = file.relative_to(repo)
+                    if ".lake" in rel.parts:
+                        continue
+                    result.add(str(rel))
+                except ValueError:
+                    continue
+
+    return sorted(result)
+
 def main() -> None:
+    if not Path(settings.REPO_PATH).resolve() or not Path(settings.REPO_PATH).is_dir():
+        logging.error(f"Invalid REPO_PATH: '{settings.REPO_PATH}'.")
+        return
     pass_1 = evaluate(
         settings.REPO_PATH,
-        settings.FILE_PATHS if isinstance(settings.FILE_PATHS, List[str]) else [settings.FILE_PATHS],
+        collect_lean_files(settings.REPO_PATH, settings.FILE_PATHS),
         settings.MODEL_PATH,
         settings.ALGORITHM,
         settings.NUM_WORKERS,

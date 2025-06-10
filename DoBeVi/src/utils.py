@@ -6,6 +6,7 @@ from search.best_first_search_algo import BestFirstSearchProver
 from search.group_score_search_algo import GroupScoreSearchProver
 from search.internlm_bfs_algo import InternlmBFSProver
 from search.layer_dropout_algo import LayerDropoutProver
+from search.back_propagate_algo import BackPropagateProver
 
 def get_num_gpus(cuda_visible_devices: str) -> int:
     return len(cuda_visible_devices.split(","))
@@ -19,6 +20,8 @@ def get_prover_clazz(algo_str: str):
         return InternlmBFSProver
     elif algo_str == "layer_dropout":
         return LayerDropoutProver
+    elif algo_str == "back_propagate":
+        return BackPropagateProver
     else:
         raise ValueError(f"Invalid algorithm: {algo_str}")
 
