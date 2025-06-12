@@ -116,8 +116,7 @@ class BackPropagateProver(Prover):
             except Exception as e:
                 logging.error(f"🚨{type(e).__name__}: {e}")
 
-            self.elapsed_time = time.time() - start_time
-            if (self.elapsed_time > self.search_timeout) or (self.max_expansions and self.num_expansions >= self.max_expansions):
+            if self.max_expansions and self.num_expansions >= self.max_expansions:
                 if self.root.status == Status.SOLVED:
                     logging.info("Search complete: proof found.")
                 else:
@@ -131,10 +130,12 @@ class BackPropagateProver(Prover):
             if self.root.status == Status.SOLVED:
                 logging.info("Search complete: proof found.")
                 break
+        
+        self.elapsed_time = time.time() - start_time
 
     async def _step(self) -> None:
         search_node = self._get_expansion_node()
-        
+        assert search_node is not None
         logging.info(f"Expanding node: {search_node}")
 
         if isinstance(search_node.leandojo_state, TacticState):
@@ -149,8 +150,10 @@ class BackPropagateProver(Prover):
             normalized_suggestions = sorted(normalized_suggestions, key=lambda x: x[2], reverse=True)
         except ModelEmptyOutputError as e:
             logging.error(f"🚨{type(e).__name__}: {e}")
-            suggestions = [("InvalidTactic", 0.0)]
-            normalized_suggestions = self._normalize_scores(suggestions)
+            # suggestions = [("InvalidTactic", 0.0)]
+            # normalized_suggestions = self._normalize_scores(suggestions)
+            suggestions = []
+            normalized_suggestions = []
 
         # try all the tactics
         results = []
@@ -275,7 +278,7 @@ class BackPropagateProver(Prover):
             while not q.empty():
                 u = q.get(block=False)
                 assert isinstance(u, UnsolvedNode), f"Expected UnsolvedNode, got '{type(u)}'"
-                if not u.out_edges:
+                if u.out_edges is None:
                     if not ans or u.priority > ans.priority:
                         ans = u
                 else:
@@ -311,15 +314,15 @@ class BackPropagateProver(Prover):
 
     def _apply_penalty(self, out_edges: List[Edge], search_node: UnsolvedNode) -> None:
         if not out_edges:
-            self._back_propagate(search_node, 0.5)
+            # self._back_propagate(search_node, 0.6)
             return
 
         total = len(out_edges)
         invalid = sum(isinstance(edge.dst, InvalidNode) for edge in out_edges)
         ratio = invalid / total
 
-        if ratio > 0.5:
-            self._back_propagate(search_node, 0.5)
+        if ratio > 0.75:
+            self._back_propagate(search_node, 0.6 * ratio)
 
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         if not self.thm or not self.root:
