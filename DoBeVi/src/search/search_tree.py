@@ -177,9 +177,9 @@ class Edge:
     """
     src: Node = field(repr=False)
     dst: Node = field(repr=False)
-    tactic: str
-    score: float
-    norm_score: float
+    tactic: str = ""
+    score: float = float('-inf')
+    norm_score: float = 0.00
 
     def distance_to_proof(self) -> float:
         return 1 + self.dst.distance_to_proof

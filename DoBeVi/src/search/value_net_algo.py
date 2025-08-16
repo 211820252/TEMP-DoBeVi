@@ -39,7 +39,7 @@ from search.visual import (
     visualize_proof_tree,
 )
 
-class LayerDropoutProver(Prover):
+class ValueNetProver(Prover):
     def __init__(
         self,
         actor_id: int,
@@ -81,6 +81,7 @@ class LayerDropoutProver(Prover):
                 priority=0.0, 
                 depth=0,
             )
+            self.root.value = (await client.async_get_score(current_state.pp))["score"]
 
             self.nodes = {current_state.id: self.root}
             self.back_edges = []
@@ -110,7 +111,7 @@ class LayerDropoutProver(Prover):
     async def _best_first_search(self) -> None:
         start_time = time.time()
         priority_queue = asyncio.PriorityQueue() # lowest priority first
-        priority_queue.put_nowait((-self.root.priority, self.root))
+        priority_queue.put_nowait((-self.root.value, self.root))
 
         while True:
             if priority_queue.empty():
@@ -153,7 +154,7 @@ class LayerDropoutProver(Prover):
         suggestions = await self._generate_tactics(tactic_state_str, search_node.depth)
         normalized_suggestions = self._normalize_scores(suggestions)
         normalized_suggestions = sorted(normalized_suggestions, key=lambda x: x[2], reverse=True)
-        
+
         # try all the tactics
         results = []
 
@@ -192,8 +193,9 @@ class LayerDropoutProver(Prover):
             state=tactic_state_str,
             num_samples=self._count_current_beam_size(depth),
         )
-        suggestions = [(item['tactic'], item['score']) for item in suggestions['suggestions']]
 
+        suggestions = [(item['tactic'], item['score']) for item in suggestions['suggestions']]
+        
         if len(suggestions) == 0:
             raise ModelEmptyOutputError("No tactic generated.")
 
@@ -236,7 +238,12 @@ class LayerDropoutProver(Prover):
                     priority=search_node.priority + score,
                     depth=depth,
                 )
-                priority_queue.put_nowait((-child_node.priority, child_node))
+                try:
+                    child_node.value = (await client.async_get_score(leandojo_new_state.pp))["score"]
+                except Exception as e:
+                    logging.error(f"🚨Failed to get score for new state: {e}\nlen:{len(leandojo_new_state.pp)}")
+                    child_node.value = -100000.0
+                priority_queue.put_nowait((-child_node.value, child_node))
             self.nodes[leandojo_new_state.id] = child_node
             edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
         else:
@@ -257,13 +264,6 @@ class LayerDropoutProver(Prover):
 
         return edge, isinstance(leandojo_new_state, ProofFinished)
     
-    def _build_prompt(
-        self,
-        search_node: UnsolvedNode,
-    ) -> str:
-        input_template = "[GOAL]\n{state}\n[PROOFSTEP]\n"
-        return input_template.format(state=search_node.leandojo_state.pp)
-    
     def _normalize_scores(
         self,
         suggestions: List[Tuple[str, float]]
@@ -276,6 +276,13 @@ class LayerDropoutProver(Prover):
             (tactic, score, exp_score / total)
             for (tactic, score), exp_score in zip(suggestions, exps)
         ]
+
+    def _build_prompt(
+        self,
+        search_node: UnsolvedNode,
+    ) -> str:
+        input_template = "[GOAL]\n{state}\n[PROOFSTEP]\n"
+        return input_template.format(state=search_node.leandojo_state.pp)
     
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         if not self.thm or not self.root:

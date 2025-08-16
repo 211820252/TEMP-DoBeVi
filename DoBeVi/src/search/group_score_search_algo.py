@@ -19,6 +19,7 @@ from dojo import (
 from search.search_algo import (
     Prover,
     SearchResult,
+    client
 )
 
 from search.search_tree import (
@@ -31,7 +32,6 @@ from search.search_tree import (
 )
 
 from search.tactic_generator import (
-    TacticGenerator,
     ModelEmptyOutputError,
 )
 
@@ -42,20 +42,21 @@ from search.visual import (
 class GroupScoreSearchProver(Prover):
     def __init__(
         self,
-        tactic_generators: List[TacticGenerator],
         actor_id: int,
+        num_gpus: int,
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
         result_save_path: str,
     ):
-        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
+        super().__init__(actor_id, num_gpus, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
 
     async def search(self, thm: TracedTheorem) -> None:
         """
         Search for a proof of a theorem using best-first search.
         """
         self._prepare()
+        await client._test_connection()
 
         self.thm = thm
 
@@ -127,7 +128,7 @@ class GroupScoreSearchProver(Prover):
                 logging.error(f"🚨{type(e).__name__}: {e}")
 
             self.elapsed_time = time.time() - start_time
-            if (self.elapsed_time > self.search_timeout) or (self.max_expansions and self.num_expansions >= self.max_expansions):
+            if self.max_expansions and self.num_expansions >= self.max_expansions:
                 if self.root.status == Status.SOLVED:
                     logging.info("Search complete: proof found.")
                 else:
@@ -168,15 +169,18 @@ class GroupScoreSearchProver(Prover):
 
     @torch.no_grad()
     async def _generate_tactics(self, tactic_state_str: str) -> List[Tuple[str, float]]:
-        tac_gen = self.select_tac_gen()
         start_time = time.time()
-
-        suggestions = await tac_gen.generate_sampling.remote(
+        suggestions = await client.async_generate_tactic_sampling(
+            self.select_tac_gen(),
             state=tactic_state_str,
             num_samples=self.num_sampled_tactics,
         )
+
+        suggestions = [(item['tactic'], item['score']) for item in suggestions['suggestions']]
+        
         if len(suggestions) == 0:
             raise ModelEmptyOutputError("No tactic generated.")
+
         self.model_elapsed_time += time.time() - start_time
         return suggestions
     

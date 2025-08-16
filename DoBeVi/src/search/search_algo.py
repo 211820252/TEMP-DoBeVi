@@ -17,13 +17,7 @@ from search.search_tree import (
     InvalidNode,
     Edge,
 )
-from search.tactic_generator import (
-    TacticGenerator,
-    HuggingFaceGenerator,
-    VllmGenerator,
-    InternlmVllmGenerator,
-)
-
+from model import GeneratorClient
 
 @dataclass(frozen=True)
 class SearchResult:
@@ -60,15 +54,16 @@ class SearchResult:
 class Prover(ABC):
     def __init__(
         self,
-        tactic_generators: List[TacticGenerator],
+        # tactic_generators: List[TacticGenerator],
         prover_id: int,
+        num_gpus: int,
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
         result_save_path: str,
     ):
-        self.tactic_generators = tactic_generators
         self.prover_id = prover_id
+        self.num_gpus = num_gpus
         self.search_timeout = search_timeout
         self.max_expansions = max_expansions
         self.num_sampled_tactics = num_sampled_tactics
@@ -85,9 +80,9 @@ class Prover(ABC):
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         raise NotImplementedError
     
-    def select_tac_gen(self) -> TacticGenerator:
+    def select_tac_gen(self) -> int:
         # TODO: implement polling strategy in the future
-        return self.tactic_generators[self.prover_id % len(self.tactic_generators)] 
+        return self.prover_id % self.num_gpus
 
     def _prepare(self) -> None:
         self.thm = None
@@ -98,7 +93,7 @@ class Prover(ABC):
         self.back_edges = None
         self.success_edges = None
 
-        self.leandojo_tactic_timeout = 20
+        self.leandojo_tactic_timeout = 30
         self.leandojo_num_threads = 1
         self.leandojo_memory_limit = 32
 
@@ -114,7 +109,7 @@ class ProverActor:
         self, 
         clazz: Prover,
         actor_id: int,
-        tactic_generators: List[TacticGenerator],
+        num_gpus: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
         search_timeout: int,
@@ -122,13 +117,12 @@ class ProverActor:
         result_save_path: str
     ):
         self.actor_id = actor_id
-        self.tactic_generators = tactic_generators
         self.max_expansions = max_expansions
         self.search_timeout = search_timeout
         self.queue_timeout = queue_timeout
         self.prover = clazz(
-            tactic_generators=tactic_generators,
             actor_id=actor_id,
+            num_gpus = num_gpus,
             search_timeout=search_timeout,
             max_expansions=max_expansions,
             num_sampled_tactics=num_sampled_tactics,
@@ -167,11 +161,11 @@ class ProverActor:
             try:
                 result = await asyncio.wait_for(
                     self.prover.get_result(),
-                    timeout=60
+                    timeout=600
                 )
             except (asyncio.TimeoutError, asyncio.CancelledError) as e:
                 logging.error(
-                    f"🚨[Actor {self.actor_id}] encountered a timeout while retrieving the search result for theorem '{thm.name}' after 60s."
+                    f"🚨[Actor {self.actor_id}] encountered a timeout while retrieving the search result for theorem '{thm.name}' after 600s."
                 )
                 result = None
             except Exception as e:
@@ -184,11 +178,14 @@ class ProverActor:
                 output_queue.put(result)
             except Exception:
                 raise
-            
+
+os.environ.pop('http_proxy', None)
+
+client = GeneratorClient(base_url="http://localhost:8000")
+
 class ProverScheduler:
     def __init__(
         self, 
-        model_path: str,
         num_workers: int,
         num_gpus: int,
         prover_clazz: Prover,
@@ -208,16 +205,16 @@ class ProverScheduler:
             ray.init(_temp_dir=RAY_TEMP_DIR)
         else:
             ray.init()
-            
-        self.tactic_generators = [
-            VllmGenerator.remote(
-                model_path=model_path,
-                length_penalty=1.0,
-                max_length=4096,
-                gpu_id=i % self.num_gpus,
-            )
-            for i in range(self.num_gpus)
-        ]
+
+        # self.tactic_generators = [
+            # VllmGenerator.remote(
+            #     model_path=model_path,
+            #     length_penalty=1.0,
+            #     max_length=4096,
+            #     gpu_id=i % self.num_gpus,
+            # )
+            # for i in range(self.num_gpus)
+        # ]
         
         # self.tactic_generators = [
         #     InternlmVllmGenerator.remote(
@@ -233,7 +230,7 @@ class ProverScheduler:
             ProverActor.remote(
                 clazz=prover_clazz,
                 actor_id=i,
-                tactic_generators=self.tactic_generators,
+                num_gpus=num_gpus,
                 max_expansions=max_expansions,
                 num_sampled_tactics=num_sampled_tactics,
                 search_timeout=search_timeout,

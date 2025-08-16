@@ -37,7 +37,18 @@ class Settings(BaseSettings):
     @field_validator("ALGORITHM", mode="before")
     @classmethod
     def validate_algorithm(cls, v):
-        allowed = ['best_first', 'group_score', 'internlm_bfs', 'layer_dropout', 'back_propagate']
+        allowed = [
+            'best_first', 
+            'group_score', 
+            'internlm_bfs', 
+            'layer_dropout', 
+            'back_propagate', 
+            'mcts', 
+            'value_net', 
+            'deepseek', 
+            'kimina_wholeproof', 
+            'ds_wholeproof'
+        ]
         if v in allowed:
             return v
         if v == "":

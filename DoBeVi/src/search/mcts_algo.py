@@ -1,9 +1,10 @@
 import asyncio
 import logging
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import torch
 import math
+import queue
 
 from dojo import (
     TracedTheorem,
@@ -39,7 +40,7 @@ from search.visual import (
     visualize_proof_tree,
 )
 
-class LayerDropoutProver(Prover):
+class MCTSProver(Prover):
     def __init__(
         self,
         actor_id: int,
@@ -57,11 +58,8 @@ class LayerDropoutProver(Prover):
         """
         self._prepare()
         await client._test_connection()
-
-        self.thm = thm
         
-        self.min_beam_size = 4  
-        self.max_beam_size = self.num_sampled_tactics
+        self.thm = thm
 
         try:
             # initialize the current root node
@@ -74,20 +72,22 @@ class LayerDropoutProver(Prover):
             ).__enter__()
 
             current_state = self.dojo.init_state
-
+            
             self.root = UnsolvedNode(
                 leandojo_state=current_state,
                 is_terminal=False,
                 priority=0.0, 
                 depth=0,
             )
+            self.root.value = 0.0
+            self.root.vis_cnt = 0
 
             self.nodes = {current_state.id: self.root}
             self.back_edges = []
             self.success_edges = []
 
             try:
-                await self._best_first_search()
+                await self._mcts_search()
             except torch.OutOfMemoryError:
                 logging.error(f"🚨OOM when sampling theorem: {self.thm.name}")
                 torch.cuda.empty_cache()
@@ -106,24 +106,18 @@ class LayerDropoutProver(Prover):
         finally: 
             if hasattr(self, "dojo"):
                 self.dojo.__exit__(None, None, None)
-    
-    async def _best_first_search(self) -> None:
+
+    async def _mcts_search(self) -> None:
         start_time = time.time()
-        priority_queue = asyncio.PriorityQueue() # lowest priority first
-        priority_queue.put_nowait((-self.root.priority, self.root))
 
         while True:
-            if priority_queue.empty():
-                logging.info("Search queue is empty.")
-                break
             try:
-                await self._step(priority_queue)
+                await self._step()
             except (asyncio.TimeoutError, asyncio.CancelledError, DojoCrashError):
                 raise
             except Exception as e:
                 logging.error(f"🚨{type(e).__name__}: {e}")
 
-            self.elapsed_time = time.time() - start_time
             if self.max_expansions and self.num_expansions >= self.max_expansions:
                 if self.root.status == Status.SOLVED:
                     logging.info("Search complete: proof found.")
@@ -132,65 +126,184 @@ class LayerDropoutProver(Prover):
                 break
 
             if self.root.status == Status.INVALID:
-                logging.info("Invalid tactic generated.")
+                logging.info("Search complete: proof failed.")
                 break
 
             if self.root.status == Status.SOLVED:
                 logging.info("Search complete: proof found.")
                 break
 
-    async def _step(self, priority_queue: asyncio.PriorityQueue[Tuple[float, UnsolvedNode]]) -> None:
-        _, search_node = priority_queue.get_nowait()
-        
-        logging.info(f"Expanding node: {search_node}")
+        self.elapsed_time = time.time() - start_time
 
+    def compute_ucb(self, node: UnsolvedNode) -> float:
+        if not isinstance(node, UnsolvedNode):
+            return 0.0
+        if node.vis_cnt == 0:
+            return float('inf')
+        if not node.in_edges:
+            return 0.0 
+        N = min(edge.src.vis_cnt for edge in node.in_edges)
+        if N <= 0:
+            return 0.0
+        return node.value / node.vis_cnt +  math.sqrt(math.log(N) / node.vis_cnt)
+
+    # def _mcts_selection(self) -> Optional[UnsolvedNode]:
+    #     """
+    #     Select a node to expand using MCTS selection strategy.
+    #     """
+    #     try:
+    #         cur_node = self.root
+    #         while cur_node.out_edges:
+    #             assert isinstance(cur_node, UnsolvedNode), f"Expected UnsolvedNode, got '{type(cur_node)}'"
+    #             valid_out_edges = [edge for edge in cur_node.out_edges if isinstance(edge.dst, UnsolvedNode)]
+    #             if not valid_out_edges:
+    #                 self._mcts_back_propagation(cur_node, 0.0)
+    #                 return None
+    #             cur_node = max(valid_out_edges, key=lambda edge: self.compute_ucb(edge.dst)).dst
+    #             assert isinstance(cur_node, UnsolvedNode), f"Expected UnsolvedNode, got '{type(cur_node)}'"
+    #         return cur_node
+            
+    #     except (asyncio.TimeoutError, asyncio.CancelledError):
+    #         raise
+        
+    #     except Exception as e:
+    #         logging.error(f"🚨{type(e).__name__}: {e}")
+    #         return None
+    
+    def _mcts_selection(self):
+        try:
+            best_node = None
+            best_ucb  = float("-inf")
+
+            stack: list = [self.root]
+            visited: set = set()
+
+            while stack:
+                node = stack.pop()
+
+                # skip already-seen nodes (DAG guarantees acyclic, but this prevents re-work)
+                if node in visited:
+                    continue
+                visited.add(node)
+
+                # --- push children (if any) for further traversal ------------------
+                if getattr(node, "out_edges", None):     # ''None'' or [] are both false-y
+                    for edge in node.out_edges:
+                        child = edge.dst
+                        if isinstance(child, UnsolvedNode) and child not in visited:
+                            stack.append(child)
+
+                # --- check whether this node is an Unsolved leaf -------------------
+                if isinstance(node, UnsolvedNode) and not node.out_edges:
+                    ucb = self.compute_ucb(node)
+                    if ucb > best_ucb:
+                        best_ucb  = ucb
+                        best_node = node
+
+            return best_node
+            
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            raise
+        
+        except Exception as e:
+            logging.error(f"🚨{type(e).__name__}: {e}")
+            return None
+
+    async def _mcts_expansion(self, search_node: UnsolvedNode) -> UnsolvedNode:
+        """
+        Expand the search node by adding new edges based on the tactics generated by the LLM.
+        """
+        assert isinstance(search_node, UnsolvedNode), f"Expected UnsolvedNode, got '{type(search_node)}'"
+        
+        if search_node.vis_cnt == 0:
+            return search_node
+        
         if isinstance(search_node.leandojo_state, TacticState):
             tactic_state_str = self._build_prompt(search_node)
         else:
             raise ValueError(f"Invalid leandojo_state for search_node: {type(search_node.leandojo_state)}")
         
         # generate tactics by LLM
-        suggestions = await self._generate_tactics(tactic_state_str, search_node.depth)
-        normalized_suggestions = self._normalize_scores(suggestions)
-        normalized_suggestions = sorted(normalized_suggestions, key=lambda x: x[2], reverse=True)
-        
+        try: 
+            suggestions = await self._generate_tactics(tactic_state_str)
+            normalized_suggestions = self._normalize_scores(suggestions)
+            normalized_suggestions = sorted(normalized_suggestions, key=lambda x: x[2], reverse=True)
+        except ModelEmptyOutputError as e:
+            logging.error(f"🚨{type(e).__name__}: {e}")
+            self._mcts_back_propagation(search_node, 0.0)
+            suggestions = []
+            normalized_suggestions = []
+
         # try all the tactics
         results = []
-
+        
         for tactic, score, norm_score in normalized_suggestions:
             edge, proof_finished = await self._run_tactic(
-                search_node, tactic, score, norm_score, priority_queue
+                search_node, tactic, score, norm_score
             )
             
             if edge is not None:
                 results.append(edge)
 
-            if proof_finished:
-                break
-        
         # expand the search node
         search_node.out_edges = results
         self.num_expansions += 1
-        priority_queue.task_done()
         
-    def _count_current_beam_size(
-        self,
-        depth: int,
-    ) -> int:
+        return next((e.dst for e in search_node.out_edges if isinstance(e.dst, Union[SolvedNode, UnsolvedNode])), None)
+
+    async def _mcts_simulation(self, simulation_node: Union[SolvedNode, UnsolvedNode]) -> float:
+        """
+        Simulate the search node to get a value estimate.
+        """
+        assert isinstance(simulation_node, Union[SolvedNode, UnsolvedNode]), f"Expected UnsolvedNode or SolvedNode, got '{type(simulation_node)}'"
         
-        progress = self.num_expansions / self.max_expansions if self.max_expansions else 0
-        factor = max(0, 1 - 15 * progress)
-        beam = self.min_beam_size + (self.max_beam_size - self.min_beam_size) * factor
+        if simulation_node.vis_cnt == 0:
+            return 0.0
         
-        return int(beam)
+        # simulate the value of the node
+        try:
+            value = (await client.async_get_score(
+                simulation_node.leandojo_state.pp if isinstance(simulation_node, UnsolvedNode) else "no goals"
+            ))["score"]
+            return value
+        except Exception as e:
+            logging.error(f"🚨{type(e).__name__}: {e}")
+            return 0.0
+
+    def _mcts_back_propagation(self, simulation_node: UnsolvedNode, value: float) -> None:
+        """
+        Back propagate the value from the simulation node to the search node.
+        """
+        assert isinstance(simulation_node, UnsolvedNode), f"Expected UnsolvedNode, got '{type(simulation_node)}'"
+        
+        # back propagate the value to the parent nodes
+        cur_node = simulation_node
+        while cur_node:
+            cur_node.vis_cnt += 1
+            cur_node.value += value
+            if not cur_node.in_edges:
+                break
+            cur_node = min(cur_node.in_edges, key=lambda edge: edge.src.vis_cnt).src
+
+    async def _step(self) -> None:
+        search_node = self._mcts_selection()
+        if search_node is None:
+            logging.info("No valid search node found, skipping MCTS step.")
+            return
+        simulation_node = await self._mcts_expansion(search_node)
+        if simulation_node is None:
+            logging.info("No valid simulation node found, skipping MCTS step.")
+            return
+        value = await self._mcts_simulation(simulation_node)
+        self._mcts_back_propagation(simulation_node, value)
 
     @torch.no_grad()
-    async def _generate_tactics(self, tactic_state_str: str, depth: int) -> List[Tuple[str, float]]:
+    async def _generate_tactics(self, tactic_state_str: str) -> List[Tuple[str, float]]:
         start_time = time.time()
         suggestions = await client.async_generate_tactic_sampling(
             self.select_tac_gen(),
             state=tactic_state_str,
-            num_samples=self._count_current_beam_size(depth),
+            num_samples=self.num_sampled_tactics,
         )
         suggestions = [(item['tactic'], item['score']) for item in suggestions['suggestions']]
 
@@ -201,21 +314,19 @@ class LayerDropoutProver(Prover):
         return suggestions
     
     async def _run_tactic(
-            self, 
-            search_node: UnsolvedNode, 
-            tactic: str, 
-            score: float, 
-            norm_score: float,
-            priority_queue: asyncio.PriorityQueue
+        self, 
+        search_node: UnsolvedNode, 
+        tactic: str, 
+        score: float, 
+        norm_score: float,
     ) -> Tuple[Optional[Edge], bool]:
-        
         # run tactic in Lean server
         start_time = time.time()
 
         leandojo_new_state = await asyncio.to_thread(
             self.dojo.run_tac, search_node.leandojo_state, tactic
         )
-
+        
         self.dojo_elapsed_time += time.time() - start_time # Tactics triggering timeout will not be counted
 
         # create a new child node
@@ -236,12 +347,14 @@ class LayerDropoutProver(Prover):
                     priority=search_node.priority + score,
                     depth=depth,
                 )
-                priority_queue.put_nowait((-child_node.priority, child_node))
+                child_node.vis_cnt = 0
+                child_node.value = 0.0
             self.nodes[leandojo_new_state.id] = child_node
             edge = Edge(src=search_node, dst=child_node, tactic=tactic, score=score, norm_score=norm_score)
-        else:
+        else: 
             assert isinstance(leandojo_new_state, TacticState), f"Expected TacticState, got{type(leandojo_new_state)}"
             child_node = self.nodes[leandojo_new_state.id]
+
             assert isinstance(child_node, UnsolvedNode), f"Expected UnsolvedNode, got {type(child_node)}"
             child_node.depth = min(child_node.depth, depth)
             if await asyncio.to_thread(child_node.is_descendant, search_node):
@@ -263,11 +376,13 @@ class LayerDropoutProver(Prover):
     ) -> str:
         input_template = "[GOAL]\n{state}\n[PROOFSTEP]\n"
         return input_template.format(state=search_node.leandojo_state.pp)
-    
+
     def _normalize_scores(
         self,
         suggestions: List[Tuple[str, float]]
     ) -> List[Tuple[str, float, float]]:
+        if not suggestions:
+            return []
 
         exps = [math.exp(score) for _, score in suggestions]
         total = sum(exps)
@@ -276,7 +391,7 @@ class LayerDropoutProver(Prover):
             (tactic, score, exp_score / total)
             for (tactic, score), exp_score in zip(suggestions, exps)
         ]
-    
+
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         if not self.thm or not self.root:
             return None

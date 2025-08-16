@@ -18,6 +18,7 @@ from config import settings
 from dojo import TracedRepo
 from search.search_tree import Status
 from search.search_algo import ProverScheduler
+from tqdm import tqdm
 
 from utils import (
     get_num_gpus,
@@ -40,16 +41,16 @@ def evaluate(
     # generate theorems
     repo = TracedRepo(repo_path)
     theorems = []
-    for file_path in file_paths:
+    for file_path in tqdm(file_paths, desc="Extracting theorems"):
         theorems_dict = repo.get_traced_theorems_from_file(file_path, True)
         for thm_name, thms in theorems_dict.items():
             theorems.extend(thms)
-    
+    # for thm in theorems:
+    #     print(f"\"{thm.name}\",")
     result_save_path = result_save_path + "/" + f"results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     # create prover scheduler and search
     scheduler = ProverScheduler(
-        model_path=model_path,
         num_workers=num_workers,
         num_gpus=get_num_gpus(os.getenv("CUDA_VISIBLE_DEVICES", "0")) if num_gpus == 0 else num_gpus,
         prover_clazz=get_prover_clazz(algorithm),

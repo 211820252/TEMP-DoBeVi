@@ -20,6 +20,7 @@ from dojo import (
 from search.search_algo import (
     Prover,
     SearchResult,
+    client
 )
 
 from search.search_tree import (
@@ -32,7 +33,6 @@ from search.search_tree import (
 )
 
 from search.tactic_generator import (
-    TacticGenerator,
     ModelEmptyOutputError,
 )
 
@@ -43,21 +43,22 @@ from search.visual import (
 class BackPropagateProver(Prover):
     def __init__(
         self,
-        tactic_generators: List[TacticGenerator],
         actor_id: int,
+        num_gpus: int,
         search_timeout: int,
         max_expansions: Optional[int],
         num_sampled_tactics: int,
         result_save_path: str,
     ):
-        super().__init__(tactic_generators, actor_id, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
+        super().__init__(actor_id, num_gpus, search_timeout, max_expansions, num_sampled_tactics, result_save_path)
 
     async def search(self, thm: TracedTheorem) -> None:
         """
         Search for a proof of a theorem using best-first search.
         """
         self._prepare()
-
+        await client._test_connection()
+        
         self.thm = thm
 
         try:
@@ -177,12 +178,13 @@ class BackPropagateProver(Prover):
 
     @torch.no_grad()
     async def _generate_tactics(self, tactic_state_str: str) -> List[Tuple[str, float]]:
-        tac_gen = self.select_tac_gen()
         start_time = time.time()
-        suggestions = await tac_gen.generate_sampling.remote(
+        suggestions = await client.async_generate_tactic_sampling(
+            self.select_tac_gen(),
             state=tactic_state_str,
             num_samples=self.num_sampled_tactics,
         )
+        suggestions = [(item['tactic'], item['score']) for item in suggestions['suggestions']]
 
         if len(suggestions) == 0:
             raise ModelEmptyOutputError("No tactic generated.")
@@ -314,15 +316,19 @@ class BackPropagateProver(Prover):
 
     def _apply_penalty(self, out_edges: List[Edge], search_node: UnsolvedNode) -> None:
         if not out_edges:
-            # self._back_propagate(search_node, 0.6)
+            # self._back_propagate(search_node, 0.5)
             return
 
-        total = len(out_edges)
-        invalid = sum(isinstance(edge.dst, InvalidNode) for edge in out_edges)
+        # total = len(out_edges)
+        # invalid = sum(isinstance(edge.dst, InvalidNode) for edge in out_edges)
+        # ratio = invalid / total if total > 0 else 1.0
+
+        total = 1
+        invalid = sum(edge.norm_score for edge in out_edges if isinstance(edge.dst, InvalidNode))
         ratio = invalid / total
 
         if ratio > 0.75:
-            self._back_propagate(search_node, 0.6 * ratio)
+            self._back_propagate(search_node, 5)
 
     async def get_result(self, visualize: bool = True) -> Optional[SearchResult]:
         if not self.thm or not self.root:

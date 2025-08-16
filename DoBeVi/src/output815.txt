@@ -1,0 +1,1669 @@
+=============================================================
+<class 'str'>
+[{"role": "user", "content": "Complete the following Lean 4 code:\n\n        ```lean4\n        import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\ntheorem mathd_numbertheory_618 (n : \u2115) (hn : n > 0) (p : \u2115 \u2192 \u2115) (h\u2080 : \u2200 x, p x = x ^ 2 - x + 41)\n    (h\u2081 : 1 < Nat.gcd (p n) (p (n + 1))) : 41 \u2264 n := by sorry\n\n        ```\n\n        Before producing the Lean 4 code to formally prove the given theorem, provide a detailed proof plan outlining the main proof steps and strategies.\n        The plan should highlight key ideas, intermediate lemmas, and proof structures that will guide the construction of the final formal proof.\n        Please ensure that the entire output, including the plan and the Lean 4 code, remains within approximately 30,000 tokens."}]
+
+
+<class 'list'>
+[{'role': 'user', 'content': 'Complete the following Lean 4 code:\n\n        ```lean4\n        import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\ntheorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)\n    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by sorry\n\n        ```\n\n        Before producing the Lean 4 code to formally prove the given theorem, provide a detailed proof plan outlining the main proof steps and strategies.\n        The plan should highlight key ideas, intermediate lemmas, and proof structures that will guide the construction of the final formal proof.\n        Please ensure that the entire output, including the plan and the Lean 4 code, remains within approximately 30,000 tokens.'}]
+=============================================================
+
+
+
+
+=============================================================
+<|im_start|>user
+Complete the following Lean 4 code:
+
+        ```lean4
+        import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by sorry
+
+        ```
+
+        Before producing the Lean 4 code to formally prove the given theorem, provide a detailed proof plan outlining the main proof steps and strategies.
+        The plan should highlight key ideas, intermediate lemmas, and proof structures that will guide the construction of the final formal proof.
+        Please ensure that the entire output, including the plan and the Lean 4 code, remains within approximately 30,000 tokens.<|im_end|>
+<|im_start|>assistant
+
+
+
+=============================================================
+
+
+
+
+=============================================================
+0
+
+### Detailed Proof and Analysis
+
+First, we need to understand the problem:
+
+**Given:**
+1. `n > 0` (i.e., `n` is a positive integer).
+2. For all `x`, `p(x) = x² - x + 41` (where `-` is natural number subtraction, so if `x² < x`, `p(x)` is not necessarily `x² - x + 41` but rather `0 + 41` because `x² - x` is `0`).
+3. `gcd(p(n), p(n + 1)) > 1` (i.e., `gcd(p(n), p(n + 1)) ≥ 2`).
+
+**Prove:** `n ≥ 41`.
+
+However, upon closer inspection, the problem in Lean is that `p(x) = x² - x + 41` is interpreted as `(x² - x) + 41`, where `-` is truncated subtraction. This is crucial because if `x = 1`, `x² - x = 0` (`1 - 1 = 0`), so `p(1) = 0 + 41 = 41`. Similarly, for `x = 0`, `p(0) = (0 - 0) + 41 = 41`. The condition `n > 0` does not help much here, but if `n < 41`, `gcd(p(n), p(n + 1))` may still be `1` or even `2` for small `n`.
+
+But the problem states `gcd(p(n), p(n + 1)) > 1` (`gcd ≥ 2`), and we must prove that `n ≥ 41`. 
+
+However, this is **not true as stated**:
+- Take `n = 40`. Then `p(40) = 40² - 40 + 41 = 1600 - 40 + 41 = 1601`, and `p(41) = 41² - 41 + 41 = 1681`. Now, `gcd(1601, 1681) = 41` (`1681 = 41²`, `1601 ≡ 41 mod 41` because `1601 = 41 * 39 + 2`, but wait `1601 = 41 * 39 + 2` is incorrect, `41 * 39 = 1599`, `1601 - 1599 = 2`, so `1601 ≡ 2 mod 41`. But `1681 = 41² ≡ 0 mod 41`, and `gcd(1601, 1681) = gcd(1601, 41 * 41)`. Since `1601 ≡ 2 mod 41`, `gcd(1601, 41 * 41) = gcd(2, 41 * 41) = gcd(2, 1681) = 1`. 
+
+Oops, I made a mistake in my earlier calculation. Actually, `gcd(1601, 1681)` is `gcd(1601, 80)` because `1681 - 1601 = 80` and `1601 = 20 * 80 + 1` (`80 * 20 = 1600`, `1601 - 1600 = 1`), so `gcd(1601, 80) = gcd(80, 1) = 1`. 
+
+Thus, for `n = 40`, `gcd(p(40), p(41)) = 1`, so `n = 40` does not violate the statement (but it would violate the hypothesis `gcd > 1`). 
+
+But `n = 42`: `p(42) = 42² - 42 + 41 = 1764 - 42 + 41 = 1763` (`42² = 1764`, `1764 - 42 = 1722`, `1722 + 41 = 1763`), `p(43) = 43² - 43 + 41 = 1849 - 43 + 41 = 1847` (`1849 - 43 = 1806`, `1806 + 41 = 1847`). Now, `gcd(1763, 1847)` is `gcd(1763, 1847 - 1763 = 84)`, `1763 = 21 * 84 + 17`, `gcd(84, 17) = gcd(17, 84 - 4 * 17 = 16)`, `gcd(17, 16) = 1`. So again, `gcd = 1`.
+
+This is getting confusing. Let's find `n` such that `gcd(p(n), p(n + 1)) > 1`.
+
+Let's try `n = 80`: `p(80) = 80² - 80 + 41 = 6400 - 80 + 41 = 6361` (`80² = 6400`, `6400 - 80 = 6320`, `6320 + 41 = 6361`), `p(81) = 81² - 81 + 41 = 6561 - 81 + 41 = 6521` (`81² = 6561`, `6561 - 81 = 6480`, `6480 + 41 = 6521`). Now, `gcd(6361, 6521)` is `gcd(6361, 160)` (`6521 - 6361 = 160`), `6361 = 39 * 160 + 1` (`39 * 160 = 6240`, `6361 - 6240 = 121`), `160 - 121 = 39`, `121 = 3 * 39 + 4`, `39 = 9 * 4 + 3`, `4 = 1 * 3 + 1`, so `gcd = 1`.
+
+This is still not working. 
+
+But notice that in Lean, `p(x) = x² - x + 41` with `x² - x` being truncated subtraction (`max(0, x² - x)`):
+- For `x = 1`, `x² - x = 1 - 1 = 0`, `p(1) = 41`.
+- For `x = 2`, `x² - x = 4 - 2 = 2`, `p(2) = 43`.
+- For `x = 0`, `x² - x = 0 - 0 = 0`, `p(0) = 41`.
+But if `x = 14`, `x² - x = 196 - 14 = 182`, `p(14) = 223`.
+`p(15) = 225 - 15 + 41 = 251`. `gcd(223, 251) = 1`.
+
+But perhaps the problem is interpreted differently, because the actual minimal `n` is not obvious here. 
+
+Alternatively, notice that for `n = 1`, `p(1) = 41`, `p(2) = 43`, `gcd = 1`.
+For `n = 41`, `p(41) = 41² - 41 + 41 = 1681`, `p(42) = 42² - 42 + 41 = 1763`.
+`gcd(1681, 1763) = gcd(1681, 1763 - 1681 = 82)`, `gcd(1681, 82) = gcd(82, 1681 - 20 * 82 = 82 - 1681 + 1640 = 82 - 41 = 41)` (`82 * 20 = 1640`, `1681 - 1640 = 41`), `gcd(82, 41) = 41 > 1`. 
+
+Thus, the smallest `n` is `n = 41`.
+
+But the statement is `41 ≤ n`, which is true in this case, because `n` cannot be less than `41` to satisfy `gcd(p(n), p(n + 1)) > 1` (since we have not found any such `n` below `41`).
+
+But is it true that for `n < 41`, `gcd(p(n), p(n + 1)) = 1`? Let's check `n = 40`:
+`p(40) = 1600 - 40 + 41 = 1601`, `p(41) = 1681`. We saw earlier that `gcd(1601, 1681) = 1`.
+
+But perhaps in Lean, `p(40)` is `40² - 40 + 41 = 1600 - 40 + 41 = 1601` (correct) and `p(41)` is `41² - 41 + 41 = 1681` (correct), so it seems `gcd(1601, 1681) = 1`.
+
+Similarly, for `n = 39`, `p(39) = 39² - 39 + 41 = 1521 - 39 + 41 = 1523`, `p(40) = 1601`, `gcd(1523, 1601) = gcd(1523, 78)` (`1601 - 1523 = 78`), `1523 = 19 * 78 + 11` (`78 * 19 = 1482`, `1523 - 1482 = 41`), so `gcd(1523, 78) = gcd(78, 41)` (`41 * 19 = 779`, `1482 - 779 = 703`), `gcd(78, 41) = gcd(41, 37) = gcd(37, 4) = gcd(4, 1) = 1`. 
+
+This suggests that for `n < 41`, `gcd(p(n), p(n + 1)) = 1`. 
+
+If that's the case, the statement `41 ≤ n` is true under the given condition `gcd > 1`.
+
+To prove it, we can:
+1. Assume for contradiction that `n < 41`.
+2. Check all cases `n ∈ {1, 2, ..., 40}` to ensure that `gcd(p(n), p(n + 1)) = 1`.
+
+But checking `40` cases is tedious. We need a smarter approach.
+
+**Observation:** For `n < 41`, `p(n)` and `p(n + 1)` are not divisible by any prime `≤ 41`. This is not entirely accurate, as `p(1) = 41` is divisible by `41`.
+
+But perhaps the key is that for `n < 41`, no prime can divide both `p(n)` and `p(n + 1)`.
+
+Alternatively, we can calculate `gcd(p(n), p(n + 1))` as follows:
+`p(n) = n² - n + 41`, `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + 2n + 1 - n - 1 + 41 = n² + n + 41`.
+So `p(n + 1) - p(n) = n`.
+
+Thus, `gcd(p(n), p(n + 1)) = gcd(p(n), n)` because `gcd(a, b) = gcd(a, b - a)`.
+
+Now, `p(n) = n² - n + 41 = n(n - 1) + 41`. 
+
+Since `n(n - 1)` is always even (as one of `n` or `n - 1` is even), `p(n)` and `n` have the same parity:
+- If `n` is even, `p(n)` is even (`n² - n` is even, so `p(n)` is odd? Wait no: if `n` is even, `n² - n` is even (`n² ≡ n mod 2`), so `p(n)` is `even + 41 = odd`). 
+
+Wait, no! The parity is reversed:
+- If `n` is even, `n² ≡ 0 mod 2` and `-n ≡ 0 mod 2`, so `n² - n ≡ 0 mod 2`, so `p(n) ≡ 0 + 41 ≡ 1 mod 2`.
+- If `n` is odd, `n² ≡ 1 mod 2` and `-n ≡ 1 mod 2`, so `n² - n ≡ 0 mod 2`, so `p(n) ≡ 0 + 41 ≡ 1 mod 2`.
+
+Thus, `p(n)` is always odd. Therefore, if `gcd(p(n), n) = d > 1`, then `d` must be odd and `d` divides `p(n) = n² - n + 41` and `d` divides `n`. 
+
+Thus, `d` divides `p(n) - (n² - n) = 41`.
+
+So the only possible common divisors are `d = 41`. 
+
+Thus, `gcd(p(n), n)` is either `1` or `41`.
+
+But if `gcd(p(n), n) = 41`, then `41` divides `n` and `p(n) = n² - n + 41`, so `41` divides `n² - n`. Since `41` divides `n`, `41` divides `n² - n`, so no contradiction. But we need to check whether `n` is divisible by `41` to have `gcd(p(n), p(n + 1)) = gcd(p(n), n) > 1`.
+
+In fact, if `n < 41` and `n > 0`, then `gcd(p(n), p(n + 1)) = gcd(p(n), n)` is `1` because `n < 41` and `41` does not divide `n`.
+
+But we must be careful: `gcd(p(n), n)` can still be `41` only if `n` is a multiple of `41`, but `n < 41` implies `n` is not a multiple of `41` (since `n > 0`), so `gcd(p(n), n) = 1`. 
+
+Thus, for `n < 41`, `gcd(p(n), p(n + 1)) = 1`, and the hypothesis `gcd > 1` cannot hold, so `n ≥ 41`.
+
+However, we must ensure that when `n < 41`, `gcd(p(n), n) = 1`. Since `p(n) ≡ 41 mod n` (`n² - n ≡ 0 mod n`), `gcd(p(n), n) = gcd(41, n)`. So, if `n < 41`, `gcd(41, n)` is `1` unless `n` is a multiple of `41`. But since `n < 41` and `n > 0`, `n` cannot be a multiple of `41`. Thus, `gcd(41, n) = 1`, so `gcd(p(n), n) = 1`.
+
+This is the key observation! Therefore, `gcd(p(n), p(n + 1)) = gcd(p(n), n) = gcd(41, n) = 1` if `n < 41`.
+
+But we are given `gcd(p(n), p(n + 1)) > 1`, so this is impossible if `n < 41`, meaning `n ≥ 41`.
+
+**Summary of the Proof:**
+1. Compute `gcd(p(n), p(n + 1)) = gcd(p(n), p(n + 1) - p(n)) = gcd(p(n), n)`.
+2. Since `p(n) ≡ 41 mod n` (because `p(n) = n² - n + 41 ≡ 0 - 0 + 41 ≡ 41 mod n`), `gcd(p(n), n) = gcd(41, n)`.
+3. If `n < 41` and `n > 0`, then `gcd(41, n) = 1` (since `41` is prime and `n` is not divisible by `41`).
+4. Therefore, `gcd(p(n), p(n + 1)) = 1` if `n < 41`, which contradicts `gcd(p(n), p(n + 1)) > 1`.
+5. Hence, `n ≥ 41`.
+
+### Step-by-Step Abstract Plan
+
+1. **Understand `p(n)`**:
+   - For `n ≥ 1`, `n² ≥ n`, so `p(n) = n² - n + 41` (no truncation in subtraction).
+   - For `n = 0`, `n² - n = 0` (truncation does not affect here).
+
+2. **Relate `gcd(p(n), p(n + 1))` to `gcd(p(n), n)`**:
+   - Compute `p(n + 1) - p(n) = (n² + n + 41) - (n² - n + 41) = 2n`.
+   - Actually, `p(n + 1) - p(n) = n² + n + 41 - (n² - n + 41) = 2n`.
+   - No! Wait: `p(n) = n² - n + 41`, `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + 2n + 1 - n - 1 + 41 = n² + n + 41`.
+   - So `p(n + 1) - p(n) = (n² + n + 41) - (n² - n + 41) = 2n`.
+   - Thus, `gcd(p(n), p(n + 1)) = gcd(p(n), 2n) = gcd(n² - n + 41, 2n)`.
+   - Further simplification: `gcd(n² - n + 41, 2n) = gcd(n² - n + 41, 2n)`.
+
+   But in the initial observation, I mistakenly wrote `p(n + 1) - p(n) = n`. 
+
+   **Correction:** 
+   - Actually, `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + 2n + 1 - n - 1 + 41 = n² + n + 41`.
+   - So `p(n + 1) - p(n) = (n² + n + 41) - (n² - n + 41) = 2n`.
+   - Thus, `gcd(p(n), p(n + 1)) = gcd(p(n), 2n) = gcd(n² - n + 41, 2n)`.
+
+   Further simplification:
+   - `gcd(n² - n + 41, 2n) = gcd(n² - n + 41, 2n)`.
+   - Note that `gcd(a, b) = gcd(b, a mod b)`, but `n² - n + 41` is not obviously related to `2n`.
+
+   Alternatively, we can write `n² - n + 41 = n(n - 1) + 41`, and `gcd(n(n - 1) + 41, 2n) = gcd(41, 2n)` because:
+   - `gcd(n(n - 1) + 41, 2n) = gcd(n(n - 1) + 41, 2n) = gcd(41, 2n)`, since `n(n - 1)` is divisible by `2` (`n(n - 1)` is always even), so `gcd(n(n - 1), 2n)` divides `2n` and is `2n` times a factor, but since `n(n - 1)` is even, `gcd` divides `2n`.
+
+   No, this is not correct. 
+
+   Actually, we can factor `2n` as follows:
+   - `gcd(n² - n + 41, 2n) = gcd(n² - n + 41 - n(2n), 2n) = gcd(-n² - n + 41, 2n)` is not helpful.
+
+   Alternatively, `gcd(n² - n + 41, 2n) = gcd(41 - n(n - 1), 2n)`.
+
+   The correct approach is to note that `gcd(n² - n + 41, 2n)` divides `gcd(n² - n + 41, 2n)`, but also `gcd(n² - n + 41, 2n)` divides `2(n² - n + 41) - n * 2n = 2(-n + 41)`, so `gcd(n² - n + 41, 2n)` divides `2(-n + 41)`.
+
+   However, `gcd(a, b)` also divides any linear combination of `a` and `b`. Here, we can find `gcd(n² - n + 41, 2n)` by noting that it must divide `41`. 
+
+   But `n² - n + 41` and `2n` cannot both be divisible by any prime other than `41`, because:
+
+   Suppose `d` divides `n² - n + 41` and `d` divides `2n`. Then `d` divides `2n * (n - 1) = 2n² - 2n`. Also, `d` divides `4 * (n² - n + 41) = 4n² - 4n + 164`.
+
+   So `d` divides `4n² - 4n + 164 - (2n² - 2n) = 2n² - 2n + 164`.
+
+   Now, `d` divides `(2n² - 2n + 164) - 2n * (n - 1) = 164`.
+
+   Thus, `d` divides `164 = 4 * 41`. So `d` is `1`, `2`, `4`, `41`, `82`, or `164`.
+
+   However, since `p(n) ≡ 41 mod 2` (as `n² - n` is even), `p(n)` is odd. So `d` cannot be `2` or `4` (as `2` and `4` are even). Thus, `d` is `1`, `41`, `82`, or `164`.
+
+   But if `d` divides `82 = 2 * 41`, then `d` is `1`, `2`, `41`, `82`. But `d` cannot be `2`. If `d` divides `164`, `d` is `1`, `2`, `4`, `41`, `82`, `164`. 
+
+   This seems complicated. Maybe a better approach is to note that `gcd(n² - n + 41, 2n)` is `gcd(n² - n + 41, 2n)` is `gcd(41, 2n)`, because `gcd(n² - n, 2n) = 2n * gcd((n² - n)/(2n), 1)`, but `(n² - n)` is `n(n - 1)`, so `gcd(n(n - 1), 2n)` is `2 * gcd(n(n - 1)/2, n)`.
+
+   Alternatively, we can observe that for `n ≤ 40`, `gcd(n² - n + 41, 2n) = 1` (since `n² - n + 41` is not divisible by `2` or any prime dividing `n`, but this is not true because if `n` is even, `n² - n` is even).
+
+   The **correct observation** is that for `n < 41`, `gcd(n² - n + 41, 2n) = gcd(41, 2n)` is `gcd(41, 2n)` because `n² - n ≡ 0 mod n` (`n² - n = n(n - 1)`). So `gcd(n² - n + 41, 2n) = gcd(41, 2n)`, since `gcd(n² - n + 41, 2n) = gcd(41, 2n)`.
+
+   (This is because `gcd(a + k * b, b) = gcd(a, b)` for any integers `a, b, k`. Here, `a = 41`, `b = n`, and `k = 1` in `n² - n`.)
+
+   Alternatively, `gcd(n² - n + 41, 2n) = gcd(41 + n(n - 1), 2n)`. Since `n(n - 1)` is always even, `gcd(41 + n(n - 1), 2n)` divides `gcd(41, 2n)` (because `n(n - 1)` is divisible by `2`, and `gcd(a + k, m) = gcd(a, m)` if `m` divides `k`). 
+
+   But here, we can write `n(n - 1) = 2 * k`, so `gcd(41 + 2k, 2n) = gcd(41, 2n)`.
+
+   Therefore, `gcd(n² - n + 41, 2n) = gcd(41, 2n)`. 
+
+   This is because `n(n - 1)` is always even, so we can write `n² - n + 41 = 2k + 41`, and `gcd(2k + 41, 2n)` divides `gcd(41, 2n)` because `gcd(2k + 41, 2n) = gcd(41, 2n)` (as `2k` is a multiple of `2`).
+
+   In fact, `gcd(2k + 41, 2n) = gcd(41, 2n)` because:
+   - Any common divisor of `2k + 41` and `2n` divides `41 * 2n - n * (2k + 41) = 41n - 41n = 0`, and any common divisor of `41` and `2n` divides `2k + 41` (if `d` divides both `41` and `2n`, it divides `41` and `2n`, but since `d` divides `2n` and `2k + 41`, it must divide `k`, which it need not necessarily).
+
+   This seems tricky, so instead, we can observe that `gcd(2k + 41, 2n) = gcd(41, 2n)` because:
+   - `gcd(2k + 41, 2n)` divides `41 * (2k + 41) - 41 * (2k + 41) = 0`... wait, that's not useful.
+
+   Alternatively, note that `gcd(n² - n + 41, 2n)` divides `2 * (n² - n + 41) - n * 2n = 82`. So `d` divides `82`.
+
+   Also, `d` divides `n² - n + 41` and `2n`. So `d` divides `2(n² - n + 41) - (2n - 2)(n - 1) = 2(n² - n + 41) - (2n² - 4n + 2n - 2) = 2(n² - n + 41) - (2n² - 2n - 2) = 2n² - 2n + 82 - 2n² + 2n + 2 = 84`.
+
+   So `d` divides `84`.
+
+   Thus, `d` divides `gcd(82, 84) = 2`. But `n² - n + 41` is odd (as `n² - n` is even), so `d` is odd. Hence, `d = 1`.
+
+   Therefore, `gcd(n² - n + 41, 2n) = 1` for all `n`.
+
+   But this contradicts our earlier examples, such as `n = 41` where `gcd(1681, 82) = gcd(1681, 82) = 41`.
+
+   **Error identified:** In `n = 41`, `p(n) = 1681`, `p(n + 1) = 1763`, and `gcd(1681, 1763) = 41`, but `p(n + 1) - p(n) = 82`, not `2 * 41 = 82`. So `gcd(1681, 1763) = gcd(1681, 82) = 41` (since `1763 - 2 * 1681 = -2 * 41 = -82`).
+
+   Thus, `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, 2n)` is not `gcd(41, 2n)` in general.
+
+   **Alternative Correct Approach:**
+
+   Compute `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + n + 41) = gcd(n² - n + 41, 2n)` (since `gcd(a, b) = gcd(a, b - a)`).
+
+   Now, `gcd(n² - n + 41, 2n) = gcd(41 - (n² - n - 41), 2n) = gcd(82 - n² + n, 2n)`, which is not directly helpful.
+
+   Another approach is to note that `gcd(n² - n + 41, 2n)` divides `gcd(n² - n + 41, 4n)` because it divides `2n`, and then to relate `gcd(n² - n + 41, 4n)` to `41`.
+
+   But in general, `gcd(n² - n + 41, 2n)` is `gcd(41, 2n)` only if `n² - n ≡ 0 mod 41`.
+
+   However, this seems complicated. Instead, perhaps the initial assumption that `gcd(p(n), p(n + 1)) = gcd(p(n), n)` is correct because:
+   - `p(n + 1) = p(n) + 2n`.
+   - So `gcd(p(n), p(n + 1)) = gcd(p(n), 2n)`.
+   - Then `gcd(p(n), 2n)` divides `gcd(p(n), 4n)`, etc., but not obviously.
+
+   But in Lean, we have `p(x) = x² - x + 41` is not `x² - x + 41` in the integers, but rather `(x² - x) + 41` with `-` as truncated subtraction.
+
+   However, if `x ≥ 1`, then `x² ≥ x`, so `x² - x` is `x² - x` (no truncation).
+
+   The confusion arises because in Lean, the condition is `Nat.gcd (p n) (p (n + 1)) > 1`, where `Nat.gcd` is the usual gcd.
+
+   But in Lean, `p(x) = (x² - x) + 41`, and if `n = 0`, `p(0) = (0 - 0) + 41 = 41`, but `n > 0`.
+
+   **Reassessing the problem:**
+   - The theorem states: if `n > 0` and `p(n) = n² - n + 41` (for `n > 0`, this is exact), and `gcd(p(n), p(n + 1)) > 1`, then `n ≥ 41`.
+   - We need to show that for `n ≤ 40`, `gcd(p(n), p(n + 1)) = 1`.
+   - To do this, we can check all `n ∈ {1, 2, ..., 40}` that `gcd(n² - n + 41, (n + 1)² - (n + 1) + 41) = 1`.
+
+   But `(n + 1)² - (n + 1) + 41 = n² + 2n + 1 - n - 1 + 41 = n² + n + 41`.
+
+   So, `gcd(n² - n + 41, n² + n + 41) = gcd(n² - n + 41, (n² + n + 41) - (n² - n + 41)) = gcd(n² - n + 41, 2n)`.
+
+   Now, as before, `n² - n + 41` is always odd (`n² - n` is always even, `41` is odd).
+
+   So `gcd(n² - n + 41, 2n)` is `gcd(n² - n + 41, n)` because `n² - n + 41` is odd and `gcd(a, b) = gcd(a, b)`.
+
+   Wait, `gcd(a, b) = gcd(a, b - a)`, so `gcd(a, 2b) = gcd(a, b)` if `a` is odd, because `gcd(a, b) = gcd(a, b - 2a)` (not sure).
+
+   Alternatively, `gcd(a, 2b) = gcd(a, b)` if `a` is odd, because `gcd(a, 2b)` divides `gcd(a, b)` (since `a` and `2b` have the same odd part).
+
+   No, not necessarily. But in our case, `a = n² - n + 41` is odd, and `gcd(n² - n + 41, 2n)` divides `gcd(n² - n + 41, n)` because `gcd(a, 2n) = gcd(a, n)` when `a` is odd.
+
+   Alternatively, `gcd(a, 2n)` divides `gcd(a, n)`. 
+
+   But `gcd(n² - n + 41, n) = gcd(41, n)`, because `n² - n + 41 ≡ -n + 41 ≡ 41 mod n`.
+
+   So, `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + n + 41) = gcd(n² - n + 41, 2n) = gcd(41, n)` (since `gcd(n² - n + 41, 2n)` divides `gcd(n² - n + 41, n) = gcd(41, n)`).
+
+   No, that's not correct. Actually, `gcd(a, 2n)` is `gcd(a, n)` when `a` is odd. 
+
+   Therefore, `gcd(n² - n + 41, 2n) = gcd(n² - n + 41, n) = gcd(41, n)`.
+
+   This is because `gcd(a, b) = gcd(a, b - a)` and `n² - n + 41 ≡ 41 mod n`.
+
+   Therefore, `gcd(n² - n + 41, 2n) = gcd(n² - n + 41, n) = gcd(41, n)`.
+
+   Now, if `n < 41`, then `gcd(41, n) = 1` because `41` is prime and `n` is not a multiple of `41`.
+
+   Thus, for `n < 41`, `gcd(p(n), p(n + 1)) = 1`.
+
+   Therefore, if `gcd(p(n), p(n + 1)) > 1`, we must have `n ≥ 41`.
+
+   **Conclusion:**
+   - The only condition is `n > 0`, but we have shown that for `n < 41`, `gcd(p(n), p(n + 1)) = 1`.
+   - Hence, if `gcd(p(n), p(n + 1)) > 1`, we must have `n ≥ 41`.
+
+### Step 1: Prove that `gcd(p(n), p(n + 1)) = gcd(41, n)`
+
+First, we must confirm that `gcd(n² - n + 41, 2n) = gcd(41, n)`.
+
+We know that:
+1. `gcd(a, 2b) = gcd(a, b)` if `a` is odd.
+   - This is because `gcd(a, 2b)` must divide `gcd(a, b)` (since `a` is odd and `2b` can only contribute even factors to `gcd`, but `a` is odd). The reverse is not necessarily true unless `a` and `2b` share some factors, but in general, `gcd(a, 2b) = gcd(a, b)` when `a` is odd.
+   - Alternatively, note that `gcd(a, 2b)` divides `a` and `2b`, so it divides `gcd(a, b)` because it must divide `b` (since it divides `a` and `gcd(a, 2b)` is co-prime to `2` unless `a` is even, but `a` is odd here).
+   - Similarly, `gcd(a, b)` divides `a` and `b`, so it divides `2b`. Moreover, `gcd(a, b)` is co-prime to `2` because `a` is odd. Thus, `gcd(a, b)` divides `gcd(a, 2b)`.
+   - Therefore, `gcd(a, 2b) = gcd(a, b)` when `a` is odd.
+
+   Here, `a = n² - n + 41` is odd, and `b = n`, so `gcd(n² - n + 41, 2n) = gcd(n² - n + 41, n)`.
+   - Further, `gcd(n² - n + 41, n) = gcd(41, n)` because `n² - n + 41 ≡ 41 mod n`.
+
+   Thus, `gcd(n² - n + 41, 2n) = gcd(41, n)`.
+
+### Step 2: For `n < 41`, `gcd(41, n) = 1`
+
+If `n < 41` and `n > 0`, then `n` cannot be a multiple of `41` because `41` is prime and `n < 41`. Therefore, `gcd(41, n) = 1`.
+
+### Step 3: Conclude `n ≥ 41`
+
+If `n < 41`, then `gcd(p(n), p(n + 1)) = gcd(41, n) = 1`, which contradicts the assumption that `gcd(p(n), p(n + 1)) > 1`. Therefore, we must have `n ≥ 41`.
+
+However, there is a small gap in Step 1: We assumed `gcd(a, 2b) = gcd(a, b)` for `a` odd. Let's prove this:
+- Let `d = gcd(a, 2b)`. Then `d` divides `a` and `2b`. Since `a` is odd, `d` is odd and divides `gcd(a, b)`.
+- Conversely, `gcd(a, b)` divides `a` and `b`, so it divides `2b`, and is co-prime to `2` (`a` is odd), so `gcd(a, b)` divides `gcd(a, 2b)`.
+- Therefore, `gcd(a, 2b) = gcd(a, b)` when `a` is odd.
+
+This completes the proof sketch.
+
+### Abstract Plan
+
+1. **Compute `p(n + 1) - p(n)`**:
+   - `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + n + 41`.
+   - `p(n) = n² - n + 41`.
+   - `p(n + 1) - p(n) = 2n`.
+   - Thus, `gcd(p(n), p(n + 1)) = gcd(p(n), 2n)`.
+
+2. **Simplify `gcd(p(n), 2n)`**:
+   - Since `p(n) = n² - n + 41` is always odd (because `n² - n` is even and `41` is odd), `gcd(p(n), 2n) = gcd(p(n), n)`.
+
+3. **Further simplify `gcd(p(n), n)`**:
+   - `gcd(p(n), n) = gcd(n² - n + 41, n) = gcd(41, n)` because `n² - n ≡ 0 mod n`.
+
+4. **Conclude `gcd(p(n), p(n + 1)) = gcd(41, n)`**:
+   - Therefore, `gcd(p(n), p(n + 1)) = gcd(41, n)`.
+
+5. **Check `n < 41`**:
+   - If `n < 41`, then `gcd(41, n) = 1` because `41` is prime and `n` is not divisible by `41` (as `n < 41`).
+
+6. **Obtain contradiction for `n < 41`**:
+   - Given `gcd(p(n), p(n + 1)) > 1`, we must have `n ≥ 41`.
+
+### Lean 4 Proof with `have` Statements
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : p n = n ^ 2 - n + 41 := by sorry
+  have h₃ : p (n + 1) = (n + 1) ^ 2 - (n + 1) + 41 := by sorry
+  have h₄ : p (n + 1) = n ^ 2 + n + 41 := by sorry
+  have h₅ : Nat.gcd (p n) (p (n + 1)) = Nat.gcd (41 : ℕ) n := by sorry
+  have h₆ : 1 < Nat.gcd (41 : ℕ) n → 41 ≤ n := by sorry
+  have h₇ : 41 ≤ n := by sorry
+  sorry
+```
+
+This proof sketch outlines the steps, and each `have` statement corresponds to a key step in the reasoning process.
+
+### Complete Lean 4 Proof
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : p n = n ^ 2 - n + 41 := by
+    rw [h₀]
+    <;> simp [Nat.add_assoc]
+    <;> ring_nf
+    <;> omega
+  
+  have h₃ : p (n + 1) = (n + 1) ^ 2 - (n + 1) + 41 := by
+    rw [h₀]
+    <;> simp [Nat.add_assoc]
+    <;> ring_nf
+    <;> omega
+  
+  have h₄ : p (n + 1) = n ^ 2 + n + 41 := by
+    rw [h₃]
+    have h₅ : (n + 1) ^ 2 - (n + 1) + 41 = n ^ 2 + n + 41 := by
+      have h₅₁ : (n + 1) ^ 2 - (n + 1) = n ^ 2 + n := by
+        cases n with
+        | zero => contradiction -- n cannot be zero as per hn
+        | succ n =>
+          cases n with
+          | zero =>
+            norm_num -- n = 1
+          | succ n =>
+            simp [Nat.succ_eq_add_one, Nat.pow_succ, Nat.mul_add, Nat.add_mul, Nat.add_assoc]
+            <;> ring_nf at *
+            <;> omega
+      rw [h₅₁]
+      <;> ring_nf
+      <;> omega
+    rw [h₅]
+    <;> ring_nf
+    <;> omega
+  
+  have h₅ : Nat.gcd (p n) (p (n + 1)) = Nat.gcd (41 : ℕ) n := by
+    rw [h₂, h₄]
+    have h₅₁ : n ^ 2 - n + 41 = n ^ 2 - n + 41 := rfl
+    have h₅₂ : Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + n + 41) = Nat.gcd 41 n := by
+      have h₅₃ : n ^ 2 - n + 41 > 0 := by
+        have h₅₄ : n ^ 2 ≥ n := by
+          have h₅₅ : n ≥ 1 := by omega
+          nlinarith
+        have h₅₅ : n ^ 2 - n ≥ 0 := by omega
+        omega
+      have h₅₄ : Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + n + 41) = Nat.gcd (n ^ 2 - n + 41) (2 * n) := by
+        have h₅₅ : n ^ 2 + n + 41 = (n ^ 2 - n + 41) + 2 * n := by
+          have h₅₅₁ : n ≥ 1 := by omega
+          have h₅₅₂ : n ^ 2 ≥ n := by nlinarith
+          have h₅₅₃ : n ^ 2 - n + 41 ≥ n ^ 2 - n + 41 := by omega
+          have h₅₅₄ : n ^ 2 + n + 41 = (n ^ 2 - n + 41) + 2 * n := by
+            cases n with
+            | zero => contradiction
+            | succ n =>
+              cases n with
+              | zero =>
+                norm_num at *
+                <;> simp_all [Nat.mul_succ, Nat.add_assoc]
+                <;> ring_nf at *
+                <;> omega
+              | succ n =>
+                simp [Nat.mul_succ, Nat.add_assoc, Nat.pow_succ, Nat.mul_zero, Nat.add_zero] at *
+                <;> ring_nf at *
+                <;> omega
+          exact h₅₅₄
+        rw [h₅₅]
+        have h₅₆ : Nat.gcd (n ^ 2 - n + 41) ((n ^ 2 - n + 41) + 2 * n) = Nat.gcd (n ^ 2 - n + 41) (2 * n) := by
+          rw [Nat.gcd_comm]
+          <;> simp [Nat.gcd_comm, Nat.gcd_add_mul_right_right, Nat.gcd_assoc]
+          <;> ring_nf at *
+          <;> omega
+        rw [h₅₆]
+      rw [h₅₄]
+      have h₅₅ : Nat.gcd (n ^ 2 - n + 41) (2 * n) = Nat.gcd 41 n := by
+        have h₅₅₁ : n ^ 2 - n + 41 = n * (n - 1) + 41 := by
+          cases n with
+          | zero => contradiction
+          | succ n =>
+            cases n with
+            | zero =>
+              norm_num at *
+              <;> simp_all [Nat.mul_succ, Nat.add_assoc]
+              <;> ring_nf at *
+              <;> omega
+            | succ n =>
+              simp [Nat.mul_succ, Nat.add_assoc, Nat.pow_succ, Nat.mul_zero, Nat.add_zero] at *
+              <;> ring_nf at *
+              <;> omega
+        rw [h₅₅₁]
+        have h₅₅₂ : Nat.gcd (n * (n - 1) + 41) (2 * n) = Nat.gcd 41 n := by
+          have h₅₅₃ : n ≥ 1 := by omega
+          have h₅₅₄ : Nat.gcd (n * (n - 1) + 41) (2 * n) = Nat.gcd 41 n := by
+            have h₅₅₅ : Nat.gcd (n * (n - 1) + 41) (2 * n) = Nat.gcd 41 n := by
+              have h₅₅₅₁ : Nat.gcd (n * (n - 1) + 41) (2 * n) = Nat.gcd 41 n := by
+                -- Use the property of gcd to simplify the expression
+                have h₅₅₅₂ : Nat.gcd (n * (n - 1) + 41) (2 * n) = Nat.gcd 41 n := by
+                  rw [show n * (n - 1) + 41 = 41 + n * (n - 1) by ring]
+                  have h₅₅₅₃ : Nat.gcd (41 + n * (n - 1)) (2 * n) = Nat.gcd 41 n := by
+                    -- Use the property of gcd to simplify the expression
+                    rw [Nat.gcd_comm]
+                    have h₅₅₅₄ : Nat.gcd (2 * n) (41 + n * (n - 1)) = Nat.gcd 41 n := by
+                      have h₅₅₅₅ : Nat.gcd (2 * n) (41 + n * (n - 1)) = Nat.gcd (2 * n) 41 := by
+                        -- Use the property of gcd to simplify the expression
+                        rw [show 41 + n * (n - 1) = 41 + n * (n - 1) by rfl]
+                        rw [Nat.gcd_comm]
+                        -- Use the property of gcd to simplify the expression
+                        simpa [Nat.gcd_comm, Nat.gcd_assoc, Nat.gcd_add_mul_right_right, Nat.gcd_mul_left] using
+                          Nat.gcd_eq_right (by
+                            have h₅₅₅₆ : 2 * n ∣ 41 + n * (n - 1) - 41 := by
+                              have h₅₅₅₇ : 41 + n * (n - 1) - 41 = n * (n - 1) := by
+                                have h₅₅₅₈ : 41 + n * (n - 1) ≥ 41 := by
+                                  have h₅₅₅₉ : n ≥ 1 := by omega
+                                  have h₅₅₅₁₀ : n * (n - 1) ≥ 0 := by
+                                    have h₅₅₅₁₁ : n - 1 ≥ 0 := by omega
+                                    nlinarith
+                                  omega
+                                have h₅₅₅₁₂ : 41 + n * (n - 1) - 41 = n * (n - 1) := by
+                                  omega
+                                exact h₅₅₅₁₂
+                              rw [h₅₅₅₇]
+                              <;> ring_nf
+                              <;> omega
+                            exact Nat.dvd_of_mod_eq_zero (by omega))
+                        <;> simp_all [Nat.gcd_comm, Nat.gcd_assoc, Nat.gcd_add_mul_right_right, Nat.gcd_mul_left]
+                        <;> ring_nf at *
+                        <;> omega
+                      rw [h₅₅₅₅]
+                      have h₅₅₅₆ : Nat.gcd (2 * n) 41 = Nat.gcd 41 n := by
+                        have h₅₅₅₇ : Nat.gcd (2 * n) 41 = Nat.gcd 41 n := by
+                          simp [Nat.gcd_comm, Nat.gcd_assoc, Nat.gcd_mul_left]
+                          <;> ring_nf at *
+                          <;> omega
+                        exact h₅₅₅₇
+                      rw [h₅₅₅₆]
+                    rw [h₅₅₅₄]
+                  rw [h₅₅₅₃]
+                exact h₅₅₅₂
+              exact h₅₅₅₁
+            exact h₅₅₅
+          exact h₅₅₄
+        rw [h₅₅₂]
+      rw [h₅₅]
+    rw [h₅₂]
+  
+  have h₆ : 1 < Nat.gcd (41 : ℕ) n → 41 ≤ n := by
+    intro h₆₁
+    by_contra h₆₂
+    -- We will show that if n < 41, then gcd(41, n) cannot be greater than 1.
+    have h₆₃ : n < 41 := by omega
+    have h₆₄ : n ≤ 40 := by omega
+    -- Since n < 41, we know that n ≤ 40.
+    interval_cases n <;> norm_num at h₆₁ ⊢ <;> omega
+  
+  have h₇ : 41 ≤ n := by
+    have h₇₁ : 1 < Nat.gcd (41 : ℕ) n := by
+      rw [h₅] at h₁
+      exact h₁
+    exact h₆ h₇₁
+  
+  exact h₇
+```
+=============================================================
+
+
+
+
+=============================================================
+1
+
+### Detailed Proof and Analysis
+
+First, let's understand the problem:
+
+We have a natural number `n > 0` and a function `p(x) = x² - x + 41` (interpreted as a natural number operation). The hypothesis is that the greatest common divisor of `p(n)` and `p(n+1)` is at least 2, and we need to prove that `n ≥ 41`.
+
+But, upon closer inspection, `Nat.gcd (p n) (p (n + 1)) > 1` does not necessarily mean that `Nat.gcd (p n) (p (n + 1)) ≥ 2` if `Nat.gcd` can be `0`. However, since `p(x)` is always positive (`x² - x + 41 ≥ 41` for `x ≥ 0`), the `Nat.gcd` cannot be `0`. But we need to confirm this:
+- For `x = 0`: `p(0) = 0 - 0 + 41 = 41` (Lean uses `x² - x` with truncated subtraction, so `0 - 0 + 41 = 41`).
+- For `x = 1`: `p(1) = 1 - 1 + 41 = 41`.
+- For `x ≥ 2`, `x² - x ≥ 2`, so `p(x) ≥ 43`. Thus, `p(x)` is always `≥ 41`.
+
+But in Lean, subtraction is truncated, so for example `x = 42`:
+- `p(42) = 42² - 42 + 41 = 1764 - 42 + 41 = 1763`.
+But Lean interprets `1764 - 42` as `1722`, so `p(42) = 1722 + 41 = 1763`.
+But wait, in Lean, is it `(x² - x) + 41` or `x² - (x + 41)`? The Lean statement says `x ^ 2 - x + 41`, which parses as `(x ^ 2 - x) + 41` (since subtraction and addition are at the same precedence level and associate to the left). 
+
+But according to the Lean documentation, `-` is left-associative, and `Nat.sub` is the truncated subtraction, meaning that if `a < b`, then `a - b = 0`. 
+
+But `x² - x + 41` for `x = 1`: 
+In Lean, `(1 : ℕ) ^ 2 - 1 + 41` = `(1 - 1) + 41` = `0 + 41` = `41`.
+
+But in math, `x² - x + 41` is `1 - 1 + 41 = 41`. So they agree here.
+
+For `x = 42`:
+Lean: `(42 : ℕ) ^ 2 - 42 + 41` = `1764 - 42 + 41` = `1722 + 41 = 1763`.
+
+Now, `p(n+1) = (n+1)² - (n+1) + 41 = (n² + 2n + 1 - n - 1) + 41 = (n² + n) + 41`.
+
+But in Lean, `(n+1 : ℕ) ^ 2 - (n+1 : ℕ)` is not necessarily `n² + 2n + 1 - n - 1` (in math), because if `n+1 > n² + n + 1` (`n² + n + 1 < n + 1` would require `n² < 0`, which is never true for `n ≥ 1`), but for `n = 1`, `(1+1)^2 - (1+1)` is `4 - 2` is `2`, and in math `n² + n + 1 = 3` and `n + 1 = 2`, so `(n+1)^2 - (n+1) = 4 - 2 = 2`.
+
+In Lean, for `n = 1`:
+`p(n) = p(1) = 1² - 1 + 41 = 41`, `p(n+1) = p(2) = 2² - 2 + 41 = 4 - 2 + 41 = 43`.
+
+Now, `Nat.gcd (p 1) (p 2) = Nat.gcd 41 43 = 1`.
+
+But the hypothesis in the Lean theorem is that this is `> 1`. So the statement is vacuously true for `n = 1`.
+
+Similarly, we can check `n = 41`:
+`p(41) = 41² - 41 + 41 = 1681 - 41 + 41 = 1681`, `p(42) = 42² - 42 + 41 = 1764 - 42 + 41 = 1763`.
+
+Then `Nat.gcd (1681) (1763) = 41` because `1763 - 1681 = 82`, and `1681 / 41 = 41`, so `41` divides both.
+
+But if `n = 40`:
+`p(40) = 40² - 40 + 41 = 1600 - 40 + 41 = 1601`, `p(41) = 1681`.
+
+`Nat.gcd (1601) (1681)`:
+`1681 - 1601 = 80`, `1601 - 80*20 = 1601 - 1600 = 1`.
+
+So `Nat.gcd(1601, 1681) = 1`, because no common factor other than `1` exists. 
+
+Thus, it seems that if `n < 41`, then `Nat.gcd(p(n), p(n+1)) = 1`. But the hypothesis is that `Nat.gcd(p(n), p(n+1)) > 1`, so `n ≥ 41`.
+
+But is `Nat.gcd(p(n), p(n+1)) = 1` always true for `n < 41`? Not sure.
+
+Wait, perhaps we need to compute `p(n+1) - p(n)`:
+
+`p(n+1) = (n+1)² - (n+1) + 41 = (n² + 2n + 1 - n - 1) + 41 = (n² + n) + 41`.
+
+`p(n) = n² - n + 41`.
+
+Thus, `p(n+1) - p(n)` in math is `(n² + n + 41) - (n² - n + 41) = 2n`. 
+
+In Lean:
+`p(n+1) - p(n)`:
+`((n+1)² - (n+1) + 41) - (n² - n + 41) = ((n² + 2n + 1) - (n + 1)) + 41 - (n² - n + 41)` = but `(n² + 2n + 1) - (n + 1)` is `n² + n` (as `n² + 2n + 1 ≥ n + 1` for all `n ≥ 0` because `n² + n ≥ 0`), and `n² - n + 41` is `n² - n + 41` (no issues because `n² ≥ n` unless `n=1`, but `n² + n + 41 ≥ n² - n + 41` because `2n ≥ 0`). So perhaps we have `p(n+1) - p(n)` is `(n² + n + 41) - (n² - n + 41) = 2n`, where `-` is truncated subtraction, and math subtraction are the same because `(n² + n + 41) ≥ (n² - n + 41)` since `n ≥ 0` (`n` is natural number). 
+
+Indeed:
+- For `n = 0`, `p(n+1) - p(n) = 41 - 41 = 0`, `2n = 0`.
+- For `n = 1`, `p(n+1) = 43`, `p(n) = 41`, `43 - 41 = 2`, `2n = 2`.
+
+In general, since `n ≥ 0`, `(n+1)² - (n+1) = n² + 2n + 1 - n - 1 = n² + n` (`≥ n² - n`), so:
+`p(n+1) - p(n) = (n² + n + 41) - (n² - n + 41)` is `(n² + n + 41) - (n² - n + 41)` is `(n² + n + 41) - (n² - n + 41)` = `n² + n + 41 - (n² - n + 41)`.
+If `n ≥ 1`, `n² + n ≥ n² - n` (because `n ≥ 0`). So `n² + n + 41 ≥ n² - n + 41`, and the Lean subtraction is the same as math subtraction:
+`n² + n + 41 - (n² - n + 41) = (n² + n + 41 - (n² - n + 41)) = 2n` (`n² - n + 41 ≤ n² + n + 41`).
+
+But for `n = 0`, `p(n+1) - p(n) = 0 - 0 = 0`, and `2n = 0`. 
+
+But the problem is that we don't actually have `p(n+1) - p(n)` in Lean; we have `Nat.gcd (p n) (p (n + 1)) > 1`.
+
+We can instead observe that `Nat.gcd (p n) (p (n + 1))` divides `p(n + 1) - p(n)` (`Nat.gcd a b` divides `a` and `b`, so it divides any linear combination of `a` and `b`). 
+
+But `p(n + 1) - p(n)` is `2n` as numbers (and also as natural numbers, as long as `n ≥ 0` because we checked earlier that the subtraction is well-defined). 
+
+This means that `Nat.gcd (p n) (p (n + 1))` divides `2n`. 
+
+But `Nat.gcd (p n) (p (n + 1)) > 1` is a hypothesis. 
+
+Now, `p(n) = n² - n + 41 = (n - 1) n + 41` (if `n ≥ 1`), but for `n = 0`, `p(0) = 41`. 
+
+We can check:
+
+We need to find `d > 1` that divides both `p(n)` and `p(n+1)`.
+
+Since `d` divides `p(n+1) - p(n) = 2n`, we must have `d` divides `2n`.
+
+But we need to find if `d > 1` is possible for `n < 41`.
+
+For `n < 41`, the only common divisors can come from primes `≤ 41`.
+
+So we need to check if `p(n)` is prime for `n < 41`.
+
+This seems hard, but we can look for primes `q` that divide both `p(n)` and `p(n+1)`.
+
+But we know that `gcd(p(n), p(n+1)) = gcd(p(n), 2n)`, because `gcd(a, b) = gcd(a, b - a)` and `p(n+1) - p(n) = 2n`. 
+
+This is useful because `p(n) = n² - n + 41`.
+
+So, if `gcd(p(n), 2n) > 1`, this means that some prime divides both `p(n)` and `2n`. 
+
+But `gcd(p(n), 2n) = gcd(n² - n + 41, 2n)`.
+
+Notice that `gcd(n² - n + 41, 2n)` divides `gcd(n² - n + 41, n) = gcd(-n + 41, n)` (because `gcd(n² - n, n) = n` divides `n` so `gcd(n² - n + 41, n) = gcd(-n + 41, n)`).
+
+Thus, `gcd(n² - n + 41, 2n)` divides `2 * gcd(-n + 41, n) = 2 * gcd(n - 41, n)` (because `gcd(-n + 41, n) = gcd(n - 41, n)`).
+
+But `gcd(n - 41, n)` divides `41`. 
+
+Since `n < 41`, `gcd(n - 41, n) = gcd(0, n) = n` or `gcd(41 - n, n)`. 
+
+This suggests that `gcd(n² - n + 41, 2n)` must divide `2 * gcd(41 - n, n)`.
+
+So, for `n < 41`, `41 - n > 0` is natural.
+
+Therefore, `gcd(n² - n + 41, 2n)` must divide `2 * gcd(41 - n, n)`.
+
+But `n < 41`, so `gcd(41 - n, n)` divides `41`. 
+
+If `n ≥ 2`, `gcd(41 - n, n)` is `gcd(41, n)` because `gcd(41 - n, n) = gcd(41, n)` (since `gcd(a, b) = gcd(a - b, b)`).
+
+Thus, `gcd(41 - n, n)` is either `1` or a divisor of `41` (`41` is prime). 
+
+Thus, `gcd(n² - n + 41, 2n)` divides `2 * gcd(41, n)`.
+
+Therefore, if `gcd(n² - n + 41, 2n) > 1`, then `n` must be divisible by some prime factor of `gcd(n² - n + 41, 2n)`.
+
+But `gcd(n² - n + 41, 2n)` is even (`> 1`), and so is `gcd(n² - n + 41, 2n)`, so if it divides `2 * gcd(41, n)`, it can only be divisible by primes of `2` or of `n`.
+
+If `n` is not divisible by `2`, then `gcd(n² - n + 41, 2n)` must be `2`. 
+
+But if `n` is not even, `gcd(n² - n + 41, 2n)` is `2` (because `n² - n + 41` is odd). 
+
+So for `n` odd and `n < 41`, `gcd(n² - n + 41, 2n)` is `gcd(n² - n + 41, n)` (`2n` can be reduced by dividing by `2` since it's even, but `n` is odd).
+
+`gcd(n² - n + 41, n)` is `gcd(41, n)` (`n` and `n² - n` are both divisible by `n`). 
+
+So `gcd(n² - n + 41, n)` is `gcd(41, n)` (a divisor of `41`).
+
+But if `n` is prime and `n ≠ 41`, then `gcd(n² - n + 41, 2n)` is `gcd(41, n)` (`n` or `1` if `n` does not divide `41`).
+
+However, since `n < 41` and `n` is prime, then `gcd(n² - n + 41, 2n)` is `gcd(41, n)` (`gcd` of a prime `n` with `41` is `n` if `n = 41`, but `n < 41`). 
+
+But in our problem, `n < 41`, so `gcd(41, n)` is `n` if `n` is prime, but if `n` is composite, `gcd(41, n)` is `gcd(n, 41)` is `1` (if `n ≠ 41`). 
+
+But if `n < 41` and `n` is not `41`, then `gcd(41, n)` is `1`, and `gcd(n² - n + 41, 2n)` divides `2 * gcd(41, n)` is `2`. 
+
+But we know that if `n` is not divisible by `2` and `n < 41`, then `gcd(n² - n + 41, 2n)` is `2` because `n² - n + 41` is odd (`n² - n` is even and `+41` is odd).
+
+Wait, so this seems that `gcd(n² - n + 41, 2n)` is `2` for all odd `n < 41`. 
+
+Indeed, we calculated earlier that for `n = 1`, `gcd(p(1), p(2)) = 1`. Wait, no. 
+
+`p(1) = 41`, `p(2) = 43`. 
+
+`gcd(41, 43) = 1`. 
+
+But we thought that `gcd(p(n), p(n+1)) = 2` for odd `n < 41`? 
+
+But we got that `gcd(p(n), p(n+1)) = 1` for `n = 1`. 
+
+But in our proof, we seem to have an inconsistency, because `n = 1` is odd, and we thought that `gcd(p(n), p(n+1)) = 2`. But in fact, `gcd(41, 43) = 1`. 
+
+So the conclusion that `gcd(n² - n + 41, 2n)` is `2` is incorrect because for `n = 1`, it's `gcd(41, 2)` is `1`. 
+
+Wait, but earlier, `p(n+1) - p(n) = 2n` is `2` when `n = 1`, and `gcd(p(n), p(n+1)) = gcd(41, 43) = 1`.
+
+Our general statement was that `gcd(a, b) = gcd(a, b - a)`. But here `gcd(p(n), p(n+1)) = gcd(p(n), p(n+1) - p(n))` is `gcd(p(n), 2n)`.
+
+But in the case `n = 1`, `gcd(p(1), 2*1) = gcd(41, 2) = 1`, and `p(1)` is `41`. 
+
+Thus, `gcd(p(n), 2n)` is `gcd(n² - n + 41, 2n)`. 
+
+But `gcd(p(n), p(n+1))` is `gcd(p(n), 2n)`. 
+
+Thus, if `gcd(p(n), p(n+1)) > 1`, then `gcd(n² - n + 41, 2n)` is not `1`, and `n` cannot be `< 41`. 
+
+We need to prove that for `n < 41`, `gcd(p(n), 2n)` is `1`.
+
+We can compute `p(n)` for `n < 41` (`n` from `1` to `40`) and check that `gcd(p(n), 2n) = 1`.
+
+In fact, for each `n < 41`, we need to check if `n² - n + 41` is divisible by any of the prime factors of `2n`.
+
+Note that:
+- If `n` is divisible by `2` but not by any prime, i.e., `n = 2`, check `p(2) = 43` and `2n = 4`, `gcd(43, 4) = 1`.
+- If `n` is divisible by `2`, then `p(n)` must be divisible by `2`, but `p(n) = n² - n + 41` is odd (`n² - n` is `n(n-1)` is even, so `p(n)` is `even + odd = odd`). So if `n` is even, `2` cannot divide `p(n)`. 
+
+Actually, `n` and `n - 1` are consecutive, so one is even, so `n(n-1)` is always even. Thus, `n² - n + 41` is `even + odd = odd` (in `ℕ`). 
+
+So `p(n)` is odd for all `n ∈ ℕ`. 
+
+This means that if `n > 1` and `n` is odd, then `gcd(p(n), 2n)` is `gcd(p(n), n)` (because `p(n)` is odd and thus `gcd(p(n), 2n) = gcd(p(n), n)`). 
+
+But `gcd(p(n), n) = gcd(n² - n + 41, n) = gcd(41, n)` (`gcd(n² - n, n) = n`, so `gcd(n² - n + 41, n) = gcd(41, n)`). 
+
+Thus, if `n < 41`, then `gcd(41, n)` is `n` if `n` is `41`, otherwise it is `1` (since `41` is prime). But `n < 41`, so `gcd(41, n) = 1`, unless `n = 41`.
+
+But we assumed `n < 41`, so `gcd(n² - n + 41, n) = 1` if `n < 41`. 
+
+Similarly, if `n` is even, `gcd(n² - n + 41, 2n)` is `gcd(n² - n + 41, 2) * gcd(n² - n + 41, n)` if `n` and `2` are coprime. 
+
+But `n² - n + 41` is odd, so `gcd(n² - n + 41, 2) = 1`. 
+
+Thus, `gcd(n² - n + 41, 2n)` is `gcd(n² - n + 41, n)` is `gcd(41, n)` (as before).
+
+So, if `n < 41`, `gcd(41, n) = 1` unless `n` is `41`. 
+
+Thus, if `n < 41`, then `gcd(p(n), p(n+1)) = gcd(p(n), 2n) = gcd(41, n) = 1`.
+
+But the problem assumes `gcd(p(n), p(n+1)) > 1`, so `n` must be `≥ 41`.
+
+But actually, for `n = 0`:
+`p(0) = 41`, `p(1) = 41`.
+`gcd(p(0), p(1)) = 41 > 1`.
+
+But the hypothesis `n > 0` is given, so `n ≥ 1`. 
+
+Thus, for `n ≥ 1` and `n < 41`, we have that `gcd(p(n), p(n+1)) = 1`. 
+
+But the hypothesis is that `gcd(p(n), p(n+1)) > 1`, so it must be that `n ≥ 41`.
+
+However, for `n = 41`, we have `p(n) = 1681 = 41²`, `p(n+1) = 42² - 42 + 41 = 1764 - 42 + 41 = 1763`.
+
+But `gcd(1681, 1763) = 41` because `1763 = 41 * 43`.
+
+Thus, we conclude that if `n ≥ 41`, then `gcd(p(n), p(n+1)) ≥ 1`, and the condition is that `gcd(p(n), p(n+1)) > 1` implies `n ≥ 41` (because if `n < 41`, then `gcd(p(n), p(n+1)) = 1`).
+
+**But wait**, is the converse true? That for `n ≥ 41`, `gcd(p(n), p(n+1)) > 1`? Not necessarily, for example, `n = 43`:
+
+`p(43) = 43² - 43 + 41 = 1849 - 43 + 41 = 1847`.
+
+`p(44) = 44² - 44 + 41 = 1936 - 44 + 41 = 1933`.
+
+`gcd(1847, 1933)`:
+Check if `1933 - 1847 = 86`.
+
+`gcd(1847, 86)`:
+`1847 - 21 * 86 = 1847 - 1806 = 41`.
+`gcd(86, 41) = 41`.
+Thus, `gcd(1847, 1933) = 41 > 1`.
+
+Another example, `n = 42`:
+
+`p(42) = 1764 - 42 + 41 = 1763`.
+
+`p(43) = 1847`.
+
+`gcd(1763, 1847)`:
+`1847 - 1763 = 84`.
+`gcd(1763, 84)`:
+`1763 = 20 * 84 + 83`.
+`gcd(84, 83) = 1`.
+So `gcd(1763, 1847) = 1`.
+
+Thus, the hypothesis `Nat.gcd (p n) (p (n + 1)) > 1` does not hold for `n = 42`, but we claim that if `Nat.gcd (p n) (p (n + 1)) > 1`, then `n ≥ 41`.
+
+However, in the Lean problem statement, the assumption is that `Nat.gcd (p n) (p (n + 1)) > 1` implies `n ≥ 41`, but we saw that for `n = 42`, `Nat.gcd (p n) (p (n + 1)) = 1`, so `n = 42` is not a counterexample because the hypothesis is false (`1 > 1` is false, so the implication is vacuously true).
+
+Similarly, for `n = 43`, the implication is true (`41 > 1` is true, and `43 ≥ 41` is true).
+
+However, we need to confirm that for `n < 41`, `Nat.gcd (p n) (p (n + 1)) = 1`. 
+
+We saw that for `n = 1`, `Nat.gcd (p 1) (p 2) = 1`, `n = 2`, `p(2) = 43`, `p(3) = 9 - 3 + 41 = 47`, `Nat.gcd(43, 47) = 1`.
+
+For `n = 40`:
+
+`p(40) = 1600 - 40 + 41 = 1601`.
+
+`p(41) = 1681 = 41²`.
+
+`Nat.gcd(1601, 1681) = 1` because `1681 - 1601 = 80`, `gcd(1601, 80)`:
+`1601 = 20 * 80 + 1`, `gcd(80, 1) = 1`.
+
+Thus, `Nat.gcd (p n) (p (n + 1)) = 1` for `n < 41`.
+
+But in the Lean theorem, the assumption is that `Nat.gcd (p n) (p (n + 1)) > 1`, which implies that `n ≥ 41`.
+
+**Summary of the proof:**
+
+1. First, we show that for all `n < 41`, `Nat.gcd (p n) (p (n + 1)) = 1`.
+   - This can be done by checking individual cases (there are only 40 cases), or by noting that `gcd(n² - n + 41, n) = gcd(41, n)` and `gcd(41, n) = 1` when `n < 41` (unless `n = 41`, which is excluded).
+
+But given that this is a Lean proof, we might need to do case analysis or induct on `n` to show that `Nat.gcd (p n) (p (n + 1)) = 1` for `n < 41`.
+
+2. Next, we assume `Nat.gcd (p n) (p (n + 1)) > 1` and need to prove that `n ≥ 41`.
+   - The contrapositive would be: if `n < 41`, then `Nat.gcd (p n) (p (n + 1)) ≤ 1`.
+   - But since `Nat.gcd (p n) (p (n + 1))` is always `≥ 1` and we know it is `≤ 1` when `n < 41`, this will give the result.
+
+However, we have `Nat.gcd (p n) (p (n + 1))` is `≥ 1` (since `Nat.gcd` is always `≥ 1`), and when `n < 41`, `Nat.gcd (p n) (p (n + 1)) = 1`, so if `Nat.gcd (p n) (p (n + 1)) > 1`, we must have `n ≥ 41`.
+
+But Lean uses `n : ℕ`, and `n > 0`, so `n ≥ 1`. We can thus do a proof by contradiction:
+- Assume `n < 41`, and derive `Nat.gcd (p n) (p (n + 1)) = 1` (but we have `Nat.gcd (p n) (p (n + 1)) > 1`), a contradiction.
+
+Thus, the theorem follows.
+
+But we might need to write a lemma that for `n ≤ 40`, `Nat.gcd (p n) (p (n + 1)) = 1`.
+
+### Step 1: Prove that `Nat.gcd (p n) (p (n + 1)) = 1` for `n ≤ 40`.
+
+This will require checking each `n ≤ 40` (`n` from `1` to `40`), but Lean cannot handle that by automation, so we have to do it by hand in Lean (which is tedious but feasible). 
+
+### Step 2: Prove that if `n > 0` and `n < 41`, then `Nat.gcd (p n) (p (n + 1)) = 1`, and thus `Nat.gcd (p n) (p (n + 1)) > 1` cannot happen.
+
+But the theorem is stated as `Nat.gcd (p n) (p (n + 1)) > 1 → 41 ≤ n`.
+
+### Step 3: Since `Nat.gcd (p n) (p (n + 1)) > 1` cannot happen if `n < 41`, we must have `n ≥ 41`.
+
+### Step 4: Conclude that `41 ≤ n`.
+
+### Abstract Plan
+
+1. **Preliminary Observations**:
+   - `p(n) = n² - n + 41` (where subtraction is natural subtraction, but `n² - n` is always `≥ 0` since `n ≥ 1`).
+   - For `n ≥ 1`, `p(n)` is always `≥ 41`.
+   - `p(n+1) - p(n) = 2n`.
+   - `gcd(p(n), p(n+1)) = gcd(p(n), 2n)`.
+   - For `n < 41`, `gcd(p(n), 2n)` is `gcd(n² - n + 41, n)` which is `gcd(41, n) = 1` (if `n < 41` and `n` is not `41`), because `41` is prime and `n < 41`.
+
+2. **Key Lemma**:
+   - For `n < 41`, `gcd(p(n), p(n+1)) = 1`.
+
+3. **Main Proof**:
+   - If `gcd(p(n), p(n+1)) > 1`, then `n` cannot be `< 41`.
+   - Therefore, `n ≥ 41`.
+
+### Lean Proof with `have` Statements
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  -- Step 1: Prove that if n < 41, then Nat.gcd (p n) (p (n + 1)) = 1
+  have h₂ : 41 ≤ n := by sorry
+  sorry
+```
+
+### Complete Lean 4 Proof
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : 41 ≤ n := by
+    by_contra h
+    -- Assume n < 41 and derive a contradiction
+    have h₃ : n < 41 := by linarith
+    have h₄ : n ≤ 40 := by linarith
+    -- Prove that Nat.gcd (p n) (p (n + 1)) = 1 for n ≤ 40
+    have h₅ : Nat.gcd (p n) (p (n + 1)) = 1 := by
+      have h₅₁ : n ≤ 40 := by linarith
+      interval_cases n <;> norm_num [h₀, Nat.gcd_eq_right, Nat.gcd_eq_left, Nat.pow_succ, Nat.mul_add,
+        Nat.add_mul, Nat.mul_one, Nat.mul_zero, Nat.add_assoc]
+      <;> norm_num [h₀, Nat.gcd_eq_right, Nat.gcd_eq_left, Nat.pow_succ, Nat.mul_add,
+        Nat.add_mul, Nat.mul_one, Nat.mul_zero, Nat.add_assoc]
+      <;> rfl
+    -- Derive a contradiction since 1 < Nat.gcd (p n) (p (n + 1)) is false
+    linarith
+  exact h₂
+```
+=============================================================
+
+
+
+
+=============================================================
+2
+
+### Detailed Proof and Analysis
+
+#### Problem Analysis
+We need to prove that if `n` is a positive integer, `p(x) = x² - x + 41` (interpreted as natural numbers), and `gcd(p(n), p(n+1)) > 1`, then `n ≥ 41`. 
+
+First, we should verify that the function `p(x) = x² - x + 41` is correctly interpreted in Lean as a function `p : ℕ → ℕ`, where all operations are natural number operations. The issue here is that if `x = 0`, `p(0) = 0² - 0 + 41 = 41` (as Lean interprets `0 - 0` as `0` in naturals). However, if `x = 1`, `p(1) = 1² - 1 + 41 = 1 - 1 + 41 = 41`. But if `x = 2`, `p(2) = 2² - 2 + 41 = 4 - 2 + 41 = 43`. 
+
+But notice that the condition `gcd(p(n), p(n+1)) > 1` cannot hold for `n < 41`, as we will show below. 
+
+However, this is not strictly true because, for example:
+- If `n = 40`, `p(40) = 40² - 40 + 41 = 1600 - 40 + 41 = 1601` and `p(41) = 41² - 41 + 41 = 1681`. Then `gcd(1601, 1681) = gcd(1601, 80) = 1` (since `1681 = 1601 + 80` and `1601 = 20 * 80 + 1` and `80 = 80 * 1 + 0`). So, `gcd(1601, 1681) = 1` does not exceed `1`. 
+
+This suggests that either the Lean formalization is incorrect, or perhaps the original problem statement in Lean is interpreted differently (e.g., with `p(x)` actually being `x² + x + 41` or something else). 
+
+But no, the given Lean theorem states:
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by sorry
+```
+
+Now, we notice that:
+1. In Lean, `-` is the truncated subtraction for naturals. So `x - y = max(x - y, 0)` in integers. 
+   - For `x ≥ y`, `x - y = x - y`.
+   - For `x < y`, `x - y = 0`.
+
+So, `p(x) = x² - x + 41` means:
+- If `x² ≥ x`, `p(x) = x² - x + 41`.
+- If `x² < x`, `p(x) = 0 + 41 = 41`.
+
+But `x² < x` only holds when `x = 0` (because `x ≥ 1 ⇒ x² ≥ x`). Therefore:
+- If `x = 0`, `p(0) = 0² - 0 + 41 = 0 + 41 = 41`.
+- If `x > 0`, `p(x) = x² - x + 41`.
+
+However, because `n > 0`, this becomes:
+- For `x = n > 0`, `p(x) = x² - x + 41 = x(x - 1) + 41`.
+  - Here, since `n ≥ 1`, `n² ≥ n` so `n² - n = n² - n` in Lean's `Nat` (not truncated).
+- Similarly, `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + n + 1`.
+
+However, for `n > 0`, `n² - n + 41` is indeed computed as `(n² - n) + 41`, and `n² - n` is the natural number subtraction since `n² ≥ n` for `n ≥ 1`.
+
+The condition is `gcd(p(n), p(n + 1)) > 1`.
+
+But notice that:
+`p(n + 1) - p(n) = (n² + n + 1) - (n² - n + 41) = 2n - 40`. 
+
+However, this is in integers (`(n² + n + 1)` as `p(n + 1)` and `(n² - n + 41)` as `p(n)`).
+
+In Lean's `Nat` terms:
+`p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + 2n + 1 - n - 1 + 41 = n² + n + 41`.
+`p(n) = n² - n + 41`.
+Then:
+`p(n + 1) - p(n) = (n² + n + 41) - (n² - n + 41) = 2n` (`-` as natural truncating subtraction).
+
+But is `2n ≥ 0`? Only if `n ≥ 0`. Since `n > 0`, `2n ≥ 2 > 0`, so:
+`p(n + 1) ≥ p(n) + 2n` (here `p(n + 1) - p(n)` is `2n` since no truncation). 
+
+Now, we can calculate the actual `gcd` (as naturals) of `p(n)` and `p(n + 1)`:
+Let `d = gcd(p(n), p(n + 1)) = gcd(p(n), 2n)`, because `gcd(a, b) = gcd(a, b - a)` and `p(n + 1) - p(n) = 2n` (`-` natural subtraction).
+
+Thus, `d` divides `2n` (`d | 2n`). 
+
+But in the original problem, it is assumed that `d > 1`.
+
+Our goal is to prove that if `d > 1`, then `n ≥ 41`.
+
+#### Observations:
+1. For `n < 41`, we have `d | 2n` and `d > 1`. The maximum possible `d` is `2n` (`d ≤ 2n`), and to show that no such `d > 1` can divide both `p(n)` and `p(n + 1)` for `n < 41`, we might have to check each `n`.
+
+But actually, it is enough to observe that:
+`p(n) = n² - n + 41 ≡ 40 mod 2`, since `n² - n` is even (because `n² ≡ n mod 2`).
+
+Therefore, `p(n) ≡ 0 mod d`, and also `2n ≡ 0 mod d`. Hence, `41 ≡ 0 mod d`, because `d` divides `p(n) + n` (`n | 2n` and `d | 2n`, and `d | p(n)`, but this doesn't directly give us `d | 41`). 
+
+Wait:
+`p(n) = n² - n + 41 ≡ 0 mod d`, and `2n ≡ 0 mod d`. So, `41 ≡ n² - n mod d`. 
+
+However, since `d | 2n`, we have `n² ≡ n mod d` is not immediately helpful. 
+
+Alternatively, since `d | 2n`, then if `n < 41`, `d ≤ 2n < 82`, so if `d > 1`, `d ∈ {2, 3, ..., 81}`. 
+
+But in `p(n) = n² - n + 41` (`n² ≥ n` since `n ≥ 1`), notice that `p(n)` grows rapidly. 
+
+For `n < 41`, we need to find the possible common divisors. 
+
+But observe that:
+- For `n ≤ 40`, `p(n)` and `p(n + 1)` are both bounded by `40² + 41 = 1681`. 
+
+However, we need `d = gcd(p(n), p(n + 1)) > 1` for `n ≤ 40`, i.e., `d` is a common divisor. 
+
+We can try to find all `n` such that `gcd(p(n), p(n + 1)) > 1`. 
+
+Alternatively, note that:
+`p(n) ≡ 41 mod n` because:
+`p(n) = n² - n + 41 ≡ -n + 41 ≡ 41 - n mod n`. 
+
+Similarly, `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + n + 1 - n - 1 + 41 = n² + 41 ≡ 41 mod n`. 
+
+Therefore, `gcd(p(n), p(n + 1)) ≡ gcd(41 - n, 41) = gcd(41, n)`.
+
+Thus:
+`gcd(p(n), p(n + 1)) = gcd(41 - n, n) = gcd(41, n)`.
+
+Hence, the condition that `gcd(p(n), p(n + 1)) > 1` is equivalent to `gcd(41, n) > 1`, which is true if and only if `n` is divisible by a prime factor of `41`, i.e., `n` must be divisible by `41`.
+
+But `41` is a prime number, so if `gcd(41, n) > 1`, then `41 | n`. But since `n > 0` (`n ≥ 1`), and `41 | n`, the smallest possible `n` is `41`. 
+
+However, in our case, `n > 0`, and `gcd(p(n), p(n + 1)) > 1` is equivalent to `gcd(41, n) > 1`. Since `41` is prime, this implies that `41` divides `n`, hence `n ≥ 41`. 
+
+But wait: the equivalence that `gcd(p(n), p(n + 1)) = gcd(41, n)` is true modulo `n` (`gcd(41, n)` divides `gcd(p(n), p(n + 1))`), but is it exact? 
+
+Let's check:
+`gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + 41) = gcd(n² - n + 41, n² + 41 - (n² - n + 41)) = gcd(n² - n + 41, n)`.
+
+Because `(n² + 41) - (n² - n + 41) = n`, `gcd(n² + 41, n² - n + 41) = gcd(n² - n + 41, n)`. 
+
+Now, `n² - n + 41 ≡ 0 mod gcd(n² - n + 41, n)`, so:
+`41 ≡ n mod gcd(n² - n + 41, n)`.
+
+Thus, `gcd(n² - n + 41, n)` divides `gcd(41, n)` because `gcd(a, b) = gcd(41 - n, n)` and `gcd(41 - n, n) = gcd(41, n)`. 
+
+Conversely, `gcd(n² + 41, n)` also divides `gcd(n² - n + 41, n)`, so:
+`gcd(n² - n + 41, n) = gcd(41, n)`. 
+
+Therefore:
+`gcd(p(n), p(n + 1)) = gcd(41, n)`. 
+
+The condition that `gcd(p(n), p(n + 1)) > 1` is equivalent to `gcd(41, n) > 1`. But since `41` is prime, `gcd(41, n) > 1` implies that `41` divides `n` (`41 | n`), and hence, since `n ≥ 1`, we must have `n ≥ 41`. 
+
+#### Step 1: Derive `gcd(p(n), p(n + 1)) = gcd(41, n)`
+- First, compute `p(n + 1) - p(n) = (n² + n + 41) - (n² - n + 41) = 2n`, but we need to use it modulo `n`.
+  - Alternatively, observe that `p(n + 1) = n² + 41` and `p(n) = n² - n + 41`.
+  - Therefore, `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + 41)`.
+  - Using `gcd(a, b) = gcd(a, b - a)`, `gcd(n² - n + 41, n² + 41) = gcd(n² - n + 41, n)`. 
+  - Now, `n² - n + 41 ≡ 41 - n ≡ 41 + (n - n) ≡ 41 mod n` because `n² ≡ 0 mod n`. Hence, `gcd(n² - n + 41, n) = gcd(41, n)`.
+  - Therefore, `gcd(p(n), p(n + 1)) = gcd(41, n)`.
+
+#### Step 2: Use the assumption `gcd(p(n), p(n + 1)) > 1`
+This implies that `gcd(41, n) > 1`. Since `41` is prime, this can happen only if `n` is divisible by `41`, i.e., `41 ≤ n`.
+
+#### Step 3: Prove `n ≥ 41`
+Since `n > 0` and `gcd(41, n) > 1`, we must have `41 | n` because `41` is prime. But then, since `n > 0`, `n ≥ 41`.
+
+#### Formalization Details in Lean
+
+However, the Lean formalization has a problem:
+For `n = 1`, `p(n) = p(1) = 1² - 1 + 41 = 1 - 1 + 41 = 41` and `p(n + 1) = p(2) = 4 - 2 + 41 = 43`. Then `gcd(41, 43) = 1`, which is not `> 1`. 
+
+But according to our proof, `gcd(41, n)` for `n = 1` is `gcd(41, 1) = 1`, which matches `gcd(41, 43) = 1`. 
+
+Similarly, for `n = 2`, `p(n) = 4 - 2 + 41 = 43`, `p(n + 1) = 9 - 3 + 41 = 47`, `gcd(43, 47) = 1`, and `gcd(41, 2) = 1`, which matches. 
+
+For `n = 40`, `p(n) = 1600 - 40 + 41 = 1601`, `p(n + 1) = 1681`, `gcd(1601, 1681) = 1` (as calculated above), and `gcd(41, 40) = 1`, which matches. 
+
+But in the Lean statement, the condition is `h₁ : 1 < Nat.gcd (p n) (p (n + 1))`. So no value of `n` satisfies this, which means that the hypothesis is vacuously true. But then the statement is `∀ n > 0, ... → 41 ≤ n`, and the conclusion is trivially `41 ≤ n` (even `n = 1` would satisfy the conclusion `41 ≤ 1`, which is false, but `1 < gcd(p(1), p(2)) = 1` is false). 
+
+Wait, no, because the Lean hypothesis is `1 < gcd` (`h₁`). In our calculation for `n = 1`, `1 < gcd` is false, so `n = 1` is excluded. 
+
+But now we realize that for `n < 41`, `gcd(p(n), p(n + 1)) = gcd(41, n) = 1` (since no number `≤ 40` is divisible by `41`). 
+
+But for `n = 41`, `gcd(41, n) = 41`, and `p(n) = 1681`, `p(n + 1) = 1764`, `gcd(1681, 1764)` is `gcd(1681, 83) = gcd(83, 0) = 83 > 1`. So the Lean statement is correct. 
+
+But when `n = 41`, the condition is satisfied. 
+
+#### Conclusion of Analysis
+The only possible way for `gcd(p(n), p(n + 1)) > 1` to hold is if `n ≥ 41` (`41 | n`). So we can structure the proof as:
+
+1. First, show that `gcd(p(n), p(n + 1)) = gcd(41, n)` (using `gcd(a, b) = gcd(a, b - a)` and `n² + 41 ≡ 0 mod gcd(41, n)`).
+2. Since `gcd(p(n), p(n + 1)) > 1`, this implies `gcd(41, n) > 1`.
+3. Because `41` is prime, `41` must divide `n`.
+4. Since `n > 0`, this implies `n ≥ 41`.
+
+However, as I am checking now, if `n ≥ 41`, it does not automatically ensure `gcd(p(n), p(n + 1)) > 1` (e.g., `n = 42` gives `gcd(41, n) = 1`). So this must have been intended to require `41 ≤ n`. 
+
+Upon re-reading, in the Lean formalization, the hypothesis is `1 < Nat.gcd (p n) (p (n + 1))`, so it is correct to assume that `n ≥ 41` (e.g., `n = 83` gives `gcd(41, n) = 41`). 
+
+So to verify:
+For `n < 41`, `gcd(p(n), p(n + 1)) = gcd(41, n) = 1`, so `1 < gcd(...)` does not hold. 
+
+For `n = 41`, `gcd(41, n) = 41 > 1`. 
+
+For `n > 41` and `41 | n` (e.g., `n = 41 * k`), `gcd(41, n) = 41 > 1`. 
+
+For `n > 41` and `41` does not divide `n` (e.g., `n = 42`), `gcd(41, n) = 1` (as `41` is prime).
+
+Therefore, the statement is correct. 
+
+#### Main Proof
+
+1. We first note that `gcd(p(n), p(n + 1)) = gcd(41, n)` for `n > 0`. 
+   - This is because:
+     - `p(n) = n² - n + 41` and `p(n + 1) = n² + 41`.
+     - `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + 41) = gcd(n² - n + 41, (n² + 41) - (n² - n + 41)) = gcd(n² - n + 41, n)`.
+     - But `gcd(n² - n + 41, n) = gcd(41, n)` because `n² - n + 41 ≡ 41 mod n`.
+
+2. Therefore, if `gcd(p(n), p(n + 1)) > 1`, then `gcd(41, n) > 1`.
+
+3. Since `41` is prime, `gcd(41, n) > 1` implies that `41` divides `n` (`41 | n`). 
+
+4. Therefore, `n ≥ 41`. 
+
+#### Step 4: Intermediate Steps in Lean
+
+1. Prove `gcd(p(n), p(n + 1)) = gcd(41, n)` (`p(n) = n² - n + 41`, `p(n + 1) = n² + 41`).
+2. From `h₁ : 1 < gcd(p(n), p(n + 1))`, deduce `gcd(41, n) > 1`.
+3. Since `41` is prime, `41 | n` (by `Nat.Prime.dvd_of_dvd_pow`, `Nat.Prime.dvd_iff_ne_one`).
+4. Hence `n ≥ 41`. 
+
+However, the hypothesis includes `n > 0`, which is needed to ensure that `n² - n` is correctly truncated (`n² ≥ n`). 
+
+### Step-by-Step Abstract Plan
+
+1. **Compute p(n) and p(n + 1):**
+   - For `n > 0`, `p(n) = n² - n + 41` (since `n² ≥ n` as `n ≥ 1`).
+   - `p(n + 1) = (n + 1)² - (n + 1) + 41 = n² + n + 1 - n - 1 + 41 = n² + 41`.
+
+2. **Simplify the gcd:**
+   - Compute `gcd(p(n), p(n + 1)) = gcd(n² - n + 41, n² + 41) = gcd(n² - n + 41, n)`.
+   - Further simplify: `gcd(n² - n + 41, n) = gcd(41, n)`.
+
+3. **Use the condition:**
+   - Since `1 < gcd(p(n), p(n + 1)) = gcd(41, n)`, we get `gcd(41, n) > 1`.
+   - Since `41` is prime and `gcd(41, n) > 1`, this implies `41 | n`.
+
+4. **Conclude:**
+   - Since `n > 0` and `41 | n`, the smallest possible `n` is `n = 41`.
+
+### Lean `have` Statements
+
+```lean4
+theorem lean_workbook_plus_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : p n = n ^ 2 - n + 41 := by sorry
+  have h₃ : p (n + 1) = n ^ 2 + 41 := by sorry
+  have h₄ : Nat.gcd (p n) (p (n + 1)) = Nat.gcd 41 n := by sorry
+  have h₅ : 1 < Nat.gcd 41 n := by sorry
+  have h₆ : 41 ≤ n := by sorry
+  sorry
+``` 
+
+This proof sketch uses the `have` statements to break down the proof into smaller, manageable steps. Each `sorry` corresponds to a part of the proof that needs to be further expanded.
+
+### Complete Lean 4 Proof
+
+```lean4
+theorem lean_workbook_plus_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : p n = n ^ 2 - n + 41 := by
+    rw [h₀]
+    <;>
+    (try simp [hn]) <;>
+    (try ring_nf) <;>
+    (try omega) <;>
+    (try norm_num) <;>
+    (try
+      {
+        cases n with
+        | zero => contradiction
+        | succ n =>
+          simp_all [Nat.succ_eq_add_one, pow_two, Nat.mul_sub_left_distrib, Nat.mul_sub_right_distrib]
+          <;> ring_nf at *
+          <;> omega
+      }) <;>
+    (try
+      {
+        cases n with
+        | zero => contradiction
+        | succ n =>
+          simp_all [Nat.succ_eq_add_one, pow_two, Nat.mul_sub_left_distrib, Nat.mul_sub_right_distrib]
+          <;> ring_nf at *
+          <;> omega
+      })
+    <;>
+    simp_all [Nat.mul_sub_left_distrib, Nat.mul_sub_right_distrib, Nat.add_assoc]
+    <;>
+    ring_nf at *
+    <;>
+    omega
+  
+  have h₃ : p (n + 1) = n ^ 2 + 41 := by
+    rw [h₀]
+    have h₃₁ : n ^ 2 + 2 * n + 1 - (n + 1) = n ^ 2 + n := by
+      have h₃₂ : n ^ 2 + 2 * n + 1 ≥ n + 1 := by
+        cases n with
+        | zero => contradiction
+        | succ n =>
+          simp [Nat.mul_succ, Nat.add_assoc]
+          <;> ring_nf at *
+          <;> omega
+      have h₃₃ : n ^ 2 + 2 * n + 1 - (n + 1) = n ^ 2 + n := by
+        have h₃₄ : n ^ 2 + 2 * n + 1 ≥ n + 1 := h₃₂
+        have h₃₅ : n ^ 2 + 2 * n + 1 - (n + 1) = n ^ 2 + n := by
+          omega
+        exact h₃₅
+      exact h₃₃
+    simp [h₃₁, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm, Nat.pow_succ, Nat.mul_add, Nat.add_mul]
+    <;> ring_nf at *
+    <;> omega
+  
+  have h₄ : Nat.gcd (p n) (p (n + 1)) = Nat.gcd 41 n := by
+    rw [h₂, h₃]
+    have h₄₁ : n ^ 2 - n + 41 = n ^ 2 - n + 41 := rfl
+    have h₄₂ : n ^ 2 + 41 = n ^ 2 + 41 := rfl
+    have h₄₃ : Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + 41) = Nat.gcd 41 n := by
+      have h₄₄ : n ^ 2 ≥ n := by
+        cases n with
+        | zero => contradiction
+        | succ n =>
+          simp [Nat.succ_le_succ_iff, Nat.pow_succ, Nat.mul_succ]
+          <;> ring_nf at *
+          <;> nlinarith
+      have h₄₅ : n ^ 2 - n + 41 = n ^ 2 - n + 41 := rfl
+      have h₄₆ : Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + 41) = Nat.gcd 41 n := by
+        have h₄₇ : Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + 41) = Nat.gcd (n ^ 2 - n + 41) (n ^ 2 + 41 - (n ^ 2 - n + 41)) := by
+          rw [← Nat.sub_add_cancel]
+          <;>
+          simp [Nat.gcd_comm]
+          <;>
+          ring_nf
+          <;>
+          omega
+        rw [h₄₇]
+        have h₄₈ : n ^ 2 + 41 - (n ^ 2 - n + 41) = n := by
+          have h₄₉ : n ^ 2 - n + 41 ≤ n ^ 2 + 41 := by
+            have h₄₁₀ : n ^ 2 - n ≤ n ^ 2 := by
+              apply Nat.sub_le
+            omega
+          have h₅₀ : n ^ 2 + 41 - (n ^ 2 - n + 41) = n := by
+            omega
+          exact h₅₀
+        rw [h₄₈]
+        have h₅₁ : Nat.gcd (n ^ 2 - n + 41) n = Nat.gcd 41 n := by
+          have h₅₂ : n ^ 2 - n + 41 = n * (n - 1) + 41 := by
+            cases n with
+            | zero => contradiction
+            | succ n =>
+              simp [Nat.succ_eq_add_one, Nat.mul_sub_left_distrib, Nat.mul_sub_right_distrib, Nat.pow_succ]
+              <;> ring_nf at *
+              <;> omega
+          rw [h₅₂]
+          have h₅₃ : Nat.gcd (n * (n - 1) + 41) n = Nat.gcd 41 n := by
+            have h₅₄ : Nat.gcd (n * (n - 1) + 41) n = Nat.gcd 41 n := by
+              rw [Nat.gcd_comm]
+              have h₅₅ : Nat.gcd n (n * (n - 1) + 41) = Nat.gcd n 41 := by
+                rw [← Nat.add_zero (n * (n - 1))]
+                have h₅₆ : n * (n - 1) + 41 = 41 + n * (n - 1) := by
+                  omega
+                rw [h₅₆]
+                simp [Nat.gcd_add_mul_right_right, Nat.gcd_comm]
+                <;>
+                simp_all [Nat.gcd_comm]
+                <;>
+                ring_nf
+                <;>
+                omega
+              rw [h₅₅]
+              <;> simp [Nat.gcd_comm]
+            exact h₅₄
+          exact h₅₃
+        rw [h₅₁]
+        <;> simp [Nat.gcd_comm]
+      exact h₄₆
+    exact h₄₃
+    <;> simp_all [Nat.gcd_comm]
+    <;> ring_nf at *
+    <;> omega
+  
+  have h₅ : 1 < Nat.gcd 41 n := by
+    rw [← h₄]
+    exact h₁
+  
+  have h₆ : 41 ≤ n := by
+    by_contra h
+    -- We will show that if n < 41, then gcd(41, n) ≤ 1, which contradicts h₅.
+    have h₇ : n < 41 := by
+      omega
+    interval_cases n <;> norm_num at h₅ ⊢ <;>
+    (try omega) <;>
+    (try contradiction) <;>
+    (try
+      {
+        simp_all [Nat.gcd_eq_right, Nat.gcd_eq_left]
+        <;> norm_num at h₅ ⊢ <;> omega
+      })
+    <;>
+    omega
+  
+  apply h₆
+```
+=============================================================
+
+
+
+
+=============================================================
+3
+
+### Detailed Proof and Analysis
+
+First, we need to understand the problem and the given hypotheses:
+1. **Problem Statement**: Prove that if `n > 0` and the greatest common divisor (gcd) of `p(n)` and `p(n + 1)` is greater than `1`, where `p(x) = x² - x + 41`, then `n ≥ 41`.
+2. **Assumptions**:
+   - `n > 0` (`n` is a positive integer).
+   - `p(x) = x² - x + 41`.
+   - `gcd(p(n), p(n + 1)) > 1`.
+3. **Goal**: Prove that `n ≥ 41`.
+
+#### Key Observations:
+1. The function `p(x) = x² - x + 41` is the same as `(x - 1)² + 40` because `x² - x = (x - 1)² - 1` does not seem directly useful here. However, the form `x² - x + 41` is important.
+2. For small values of `n`, `gcd(p(n), p(n + 1))` can be computed directly:
+   - For `n = 1`, `p(1) = 1 - 1 + 41 = 41` and `p(2) = 4 - 2 + 41 = 43`, `gcd(41, 43) = 1`.
+   - For `n = 2`, `p(2) = 43` and `p(3) = 9 - 3 + 41 = 47`, `gcd(43, 47) = 1`.
+   - For `n = 3`, `p(3) = 47` and `p(4) = 16 - 4 + 41 = 53`, `gcd(47, 53) = 1`.
+   - For `n = 4`, `p(4) = 53` and `p(5) = 25 - 5 + 41 = 61`, `gcd(53, 61) = 1`.
+   - For `n = 5`, `p(5) = 61` and `p(6) = 36 - 6 + 41 = 71`, `gcd(61, 71) = 1`.
+   - For `n = 6`, `p(6) = 71` and `p(7) = 49 - 7 + 41 = 83`, `gcd(71, 83) = 1`.
+   - For `n = 7`, `p(7) = 83` and `p(8) = 64 - 8 + 41 = 97`, `gcd(83, 97) = 1`.
+   - For `n = 8`, `p(8) = 97` and `p(9) = 81 - 9 + 41 = 113`, `gcd(97, 113) = 1`.
+   - For `n = 9`, `p(9) = 113` and `p(10) = 100 - 10 + 41 = 131`, `gcd(113, 131) = 1`.
+   - For `n = 10`, `p(10) = 131` and `p(11) = 121 - 11 + 41 = 151`, `gcd(131, 151) = 1`.
+   - For `n = 11`, `p(11) = 151` and `p(12) = 144 - 12 + 41 = 173`, `gcd(151, 173) = 1`.
+   - For `n = 12`, `p(12) = 173` and `p(13) = 169 - 13 + 41 = 197`, `gcd(173, 197) = 1`.
+   - For `n = 13`, `p(13) = 197` and `p(14) = 196 - 14 + 41 = 223`, `gcd(197, 223) = 1`.
+   - For `n = 14`, `p(14) = 223` and `p(15) = 225 - 15 + 41 = 251`, `gcd(223, 251) = 1`.
+   - For `n = 15`, `p(15) = 251` and `p(16) = 256 - 16 + 41 = 281`, `gcd(251, 281) = 1`.
+   - For `n = 16`, `p(16) = 281` and `p(17) = 289 - 17 + 41 = 313`, `gcd(281, 313) = 1`.
+   - For `n = 17`, `p(17) = 313` and `p(18) = 324 - 18 + 41 = 347`, `gcd(313, 347) = 1`.
+   - For `n = 18`, `p(18) = 347` and `p(19) = 361 - 19 + 41 = 383`, `gcd(347, 383) = 1`.
+   - For `n = 19`, `p(19) = 383` and `p(20) = 400 - 20 + 41 = 421`, `gcd(383, 421) = 1`.
+   - For `n = 20`, `p(20) = 421` and `p(21) = 441 - 21 + 41 = 461`, `gcd(421, 461) = 1`.
+   - For `n = 21`, `p(21) = 461` and `p(22) = 484 - 22 + 41 = 503`, `gcd(461, 503) = 1`.
+   - For `n = 22`, `p(22) = 503` and `p(23) = 529 - 23 + 41 = 547`, `gcd(503, 547) = 1`.
+   - For `n = 23`, `p(23) = 547` and `p(24) = 576 - 24 + 41 = 593`, `gcd(547, 593) = 1`.
+   - For `n = 24`, `p(24) = 593` and `p(25) = 625 - 25 + 41 = 641`, `gcd(593, 641) = 1`.
+   - For `n = 25`, `p(25) = 641` and `p(26) = 676 - 26 + 41 = 691`, `gcd(641, 691) = 1`.
+   - For `n = 26`, `p(26) = 691` and `p(27) = 729 - 27 + 41 = 743`, `gcd(691, 743) = 1`.
+   - For `n = 27`, `p(27) = 743` and `p(28) = 784 - 28 + 41 = 797`, `gcd(743, 797) = 1`.
+   - For `n = 28`, `p(28) = 797` and `p(29) = 841 - 29 + 41 = 853`, `gcd(797, 853) = 1`.
+   - For `n = 29`, `p(29) = 853` and `p(30) = 900 - 30 + 41 = 871 + 41 = 941 - 871 is not clear, but we note that 853 = 23 * 37`, `871 = 13 * 67`, `941 is prime, 941 - 941 = 0 not useful`. Actually `853 = 871 - 18 = 871 - (729 - 513 is not directly helpful. Alternatively, compute gcd(853, 941)` by Euclidean algorithm: 941 = 853 + 88, 853 = 9 * 88 + 41, 88 = 2 * 41 + 6, 41 = 6 * 6 + 5, 6 = 1 * 5 + 1, 5 = 5 * 1 + 0, so gcd(853, 941) = 1.
+   - For `n = 30`, `p(30) = 900 - 30 + 41 = 911` is prime, `p(31) = 961 - 31 + 41 = 971` is prime, `gcd(911, 971)` is 1 since both are primes and 911 < 971.
+   - For `n = 41`, `p(41) = 1681 - 41 + 41 = 1681` and `p(42) = 1764 - 42 + 41 = 1763 = 13 * 135 + 8, not obvious. Actually, `1763 ÷ 13 = 135 + 8/13`, so `1763 = 13 * 135 + 8`, not useful. It is better to factor `1763 = 41 * 43`, because `41` is already part of `p(41) = 41² = 1681`, and `43 = 41 + 2`. So `gcd(p(41), p(42)) = gcd(1681, 1763) = gcd(1681, 1763 - 1681) = gcd(1681, 82) = gcd(82, 1681 - 82 * 20 = 82 * 20 = 1640, 1681 - 1640 = 41) = gcd(82, 41) = 41`.
+   But for `n = 41`, `gcd(p(41), p(42)) = 41 > 1`.
+3. From the above computations, it seems that `gcd(p(n), p(n + 1)) > 1` is a rare event and only occurs when `n ≥ 41`. This suggests that the statement is correct, and for `n < 41`, `gcd(p(n), p(n + 1)) = 1` always.
+
+However, we need to prove that if `gcd(p(n), p(n + 1)) > 1`, then `n ≥ 41`.
+
+#### Deriving the Proof:
+
+1. Let `g = gcd(p(n), p(n + 1))`.
+   - Since `g` divides both `p(n)` and `p(n + 1)`, it divides any linear combination of them.
+   - We compute `p(n + 1) - p(n)`:
+     ```
+     p(n + 1) - p(n) = ( (n + 1)² - (n + 1) + 41 ) - (n² - n + 41)
+                     = (n² + 2n + 1 - n - 1 + 41) - (n² - n + 41)
+                     = (n² + n + 41) - (n² - n + 41)
+                     = (n² + n + 41 - n² + n - 41) = 2n.
+     ```
+     So `g` divides `2n`.
+   - Similarly, we can compute `p(n + 2) - 2p(n + 1) + p(n)`, because the sequence `p(n)` is quadratic, and its second differences should be constant.
+     However, this is less useful here. Alternatively, observe that `g` must divide `p(n)` and `2n`, so `g` divides `gcd(p(n), 2n)`.
+
+   A better approach is to compute `4p(n + 1) - (2n + 1)p(n)` to eliminate the `n²` and `n` terms, but this might not directly help.
+   Alternatively, consider the polynomial form:
+   The quadratic sequence can be studied using polynomial techniques.
+
+   Notice that:
+   ```
+   p(n + 1) - p(n) = 2n + 1,
+   p(n + 2) - p(n + 1) = 2(n + 1) + 1 = 2n + 3,
+   ```
+   so no constant difference exists, and the differences are increasing.
+
+   The better approach is to compute `2p(n) - p(n + 1) = 2(n² - n + 41) - ((n + 1)² - (n + 1) + 41) = 2n² - 2n + 82 - (n² + 2n + 1 - n - 1 + 41) = n² - 4n + 40`. 
+   However, `gcd(p(n), p(n + 1))` must also divide `2p(n) - p(n + 1) = n² - 4n + 40`.
+
+   Next, compute `n² - 4n + 40 mod (p(n))` = `(n² - n + 41) + (-3n - 1)` so:
+   `n² - 4n + 40 ≡ (-3n - 1) mod (p(n))`. 
+   Not sure if this helps.
+
+   Alternatively, notice that `p(n) = n(n - 1) + 41` is `≥ n² - n + 41` for `n ≥ 1`.
+   Therefore, unless `n` is very small, `p(n)` grows much faster than `2n`. So we can test small `n` and observe that `gcd > 1` is rare and only appears for `n ≥ 41`.
+
+   Alternatively, the statement to prove is correct as per the computations for `n < 41`. 
+
+   Here is a concrete approach: Since `p(n + 1) - p(n) = 2n + 1`, and `g = gcd(p(n), p(n + 1))` divides `2n + 1`, and `g` divides `p(n)`, which is `n² - n + 41`.
+
+   Also, `g` must divide `p(n + k(2n + 1))` for any integer `k`, by substitution. Let’s take `k = 2 - n` (or any `k` that makes the linear term vanish).
+
+   Instead, perhaps the following is better: compute `4p(n + 1) - (2n + 1)p(n)`.
+
+   We have:
+   ```
+   4p(n + 1) - (2n + 1)p(n) = 4(p(n + 1) - p(n)) + (4p(n) - (2n + 1)p(n))
+                              = 4(2n + 1) + p(n)(4 - (2n + 1))
+                              = 8n + 4 + p(n)(3 - 2n).
+   ```
+   However, `4p(n + 1) - (2n + 1)p(n)` can be expanded more directly to:
+   ```
+   4p(n + 1) = 4((n + 1)² - (n + 1) + 41) = 4(n² + 2n + 1 - n - 1 + 41) = 4(n² + n + 41) = 4n² + 4n + 164,
+   (2n + 1)p(n) = (2n + 1)(n² - n + 41) = 2n³ - 2n² + 82n + n² - n + 41 = 2n³ - n² + 81n + 41.
+   ```
+   So, `4p(n + 1) - (2n + 1)p(n) = 4n² + 4n + 164 - 2n³ + n² - 81n - 41 = -2n³ + 5n² - 77n + 123`.
+   Not obviously helpful.
+
+   A better idea is to use the fact that `g` divides both `p(n)` and `2n + 1`, so it divides `n * p(n) + (n + 1)(2n + 1) p(n)`? No, not directly.
+   
+   A better approach is as follows:
+   `g` divides both `p(n)` and `2n + 1`.
+   Now, observe that:
+   `(2n + 1) * p(n) = (2n + 1)(n² - n + 41) = 2n³ - 2n² + 82n + n² - n + 41 = 2n³ - n² + 81n + 41`.
+   Compute `(n + 41) * p(n)`:
+   ```
+   (n + 41)p(n) = n * p(n) + 41 * p(n) = n(n² - n + 41) + 41(n² - n + 41) = n³ - n² + 41n + 41n² - 41n + 41² = n³ + 40n² + 41².
+   ```
+   Now, `(n + 41)p(n) - (2n + 1)p(n) = 40n² + (41² - 1) = 40n² + 1680`.
+   Since `g` divides `(n + 41)p(n)` and `(2n + 1)p(n)`, it divides `40n² + 1680`. But also, `g` divides `2n + 1`. Since `g` divides `2n + 1`, it must divide `40n² + 1680` as follows:
+   `(40n² + 1680) = 40n² + 40 * 42 = 40(n² + 42)`.
+   Alternatively, to find `40n² + 1680 mod (2n + 1)`, we use `n ≡ -1/2 mod g`, so `n² ≡ 1/4 mod g` because `2n ≡ -1 mod g`, multiply by `(2n) ≡ -1` to get `4n² ≡ 1 mod g`. Then `40n² ≡ 10 mod g`, so `40n² + 1680 ≡ 10 + 1680 ≡ 1690 ≡ 0 mod g` only if `g` divides `1690 = 40n² + 1680` and `(2n + 1)` must be satisfied (`g` divides `(2n + 1)`). However, `1690` seems arbitrary and hard to factor.
+
+   Let’s instead use the simpler observation that if `g` divides both `p(n)` and `2n + 1`, and `p(n)` is `n² - n + 41`, then:
+   Write `d = gcd(n² - n + 41, 2n + 1)`.
+   Let `m = n² - n + 41` and `k = 2n + 1`. Then, `k ≡ -1 mod (4k)`, and `m = n(n - 1) + 41 ≡ ( (k - 1)/2 )( (k - 1)/2 - 1 ) + 41 ≡ ( (k - 1)(k - 3)/4 + 41 mod k`).
+
+   Expand `(k - 1)(k - 3)/4 = (k² - 4k + 3)/4 = k²/4 - k + 3/4` so `(k - 1)(k - 3)/4 ≡ 3/4 mod k` (assuming `4` is invertible mod `k`). 
+
+   Not sure if this is simplifying things.
+
+   A better idea is to observe that `d` divides both `n² - n + 41` and `2n + 1`. So we can solve for `n` from `2n ≡ -1 mod d`, and then substitute back into the first congruence.  
+
+   Let `2n ≡ -1 mod d`. Then `n ≡ -1/2 mod d`. Substitute into `n² - n + 41 ≡ 0 mod d`:
+   ```
+   (1/4 + 1/2 + 41 ≡ 0 mod d, i.e., (1/4) + (2/4) + 41 ≡ 0 mod d, i.e., 3/4 + 41 ≡ 0 mod d, i.e., 167/4 ≡ 0 mod d.
+   ```
+   Since `167/4 ≡ 0 mod d` implies `167 ≡ 0 mod d`, because `4` is invertible modulo `d` (as `2n ≡ -1 mod d` cannot have both `n ≡ 0` and `d = 1` unless `0 ≡ -1 mod 1`, which is true, but then `d = 1`).
+   Here we know that `d > 1`, but `2n + 1 ≡ 0 mod d` and `d` divides `2n + 1`, and the only possibility is `d` divides `167`, since `167` is prime (`d` must be `1` or `167`). We know `d > 1`, so `d = 167` (`d` cannot be larger than `2n + 1`, unless `n` is very large, but since `n` is arbitrary, it is better to check that `167` is prime).  
+
+   So, `d` must be `167` (the only divisor `>1`), and thus `167` divides `2n + 1`, so `2n ≡ -1 mod 167` (not needed here), and also `167` divides `n² - n + 41`.
+   Now, from `2n ≡ -1 mod 167`, we get `n ≡ -1/2 ≡ 83 mod 167` (since `2 * 83 = 166 ≡ -1 mod 167`). Thus, `n = 167k + 83` for some integer `k ≥ 0`. But we need `n ≥ 1`, so `k ≥ 0`. 
+
+   But we need to prove that if `gcd(p(n), p(n + 1)) > 1`, then `n ≥ 41`. The above gives `n ≡ 83 mod 167` (`n = 83, 250, 417, …`), but it does not directly show that `n ≥ 41` (unless we consider that `n = 1, …, 82` is not a multiple of `167`, and check for `n ≤ 82` if the `gcd` can be `>1`). 
+
+   But we need to prove `n ≥ 41`. However, if `n ≡ 83 mod 167`, then `n ≥ 83 > 41` (assuming `n ≥ 1` is given, and `n = 83, 250, …` is the solution). But our `n` in the hypothesis is `n > 0`, so the general solution is `n ≥ 83` (first valid `n ≡ 83 mod 167` is `n = 83`, next is `250`, etc.).
+
+   But the hypothesis is `gcd(p(n), p(n + 1)) > 1` (`g ≥ 2`). We have seen that this implies `167` divides `2n + 1` (`n ≡ 83 mod 167`) and `167` divides `p(n)`. So, no smaller `n` works, and `n ≥ 41` is a much looser bound than `n ≡ 83 mod 167`.
+
+   However, the problem assumes that `n > 0` is given, and `gcd(p(n), p(n + 1)) > 1`, and asks us to prove `n ≥ 41`. So perhaps we should proceed by contradiction assuming `n < 41` and `gcd(p(n), p(n + 1)) > 1` is impossible (as per earlier computations).
+
+   So, our approach will be:
+   1. Assume `n < 41` (`n` is a positive integer, `1 ≤ n ≤ 40`).
+   2. Compute `p(n)` and `p(n + 1)` explicitly for each `n` and observe that `gcd(p(n), p(n + 1)) = 1`.
+   3. Since we must have `gcd(p(n), p(n + 1)) > 1` in the hypothesis, `n` cannot be `≤ 40`.
+
+   But this is not rigorous, because for larger `n`, there may be cases where `gcd > 1` (we know `n ≡ 83 mod 167` makes `gcd(p(n), p(n + 1)) > 1`). However, since the hypothesis is `gcd > 1`, we have no restriction on `n` except `n > 0` (`n ≥ 1`), so we need to prove that `n` must be `≥ 41` when `gcd > 1`. 
+
+   So perhaps the original statement was meant to have `gcd` divisible by some fixed integer (which is likely false), or something else. The computations indicate that `gcd > 1` can only occur when `n ≡ 83 mod 167`, in which case `n ≥ 83` (`n > 0` and `n ≡ 83 mod 167` implies `n ≥ 83`). 
+
+   So, we can modify the proof strategy to show that if `gcd(p(n), p(n + 1)) > 1`, then `n ≥ 83`.
+
+   But the problem asks for `n ≥ 41`, which is a weaker condition (and `n ≥ 83` implies `n ≥ 41`).
+
+   However, when `n ≤ 40`, we can manually check each case that `gcd ≤ 1`:
+   - For `n ≤ 40`, we need to show that `gcd(p(n), p(n + 1)) ≤ 1`.
+     Here is a quick observation: `p(n + 1) - p(n) = 2n + 1` is `≤ 81` (if `n ≤ 40`).
+     Suppose `g = gcd(p(n), p(n + 1)) = gcd(p(n), 2n + 1)` because `gcd(a, b) = gcd(a, b - a)`.
+     Let `d` be a prime divisor of `g`. Then `d` divides both `p(n)` and `2n + 1`. This means:
+     - `d` divides `p(n) = n² - n + 41`,
+     - `d` divides `2n + 1`. Thus, `n ≡ -1/2 mod d`.
+     Substitute `n ≡ -1/2 mod d` into `p(n)`:
+     ```
+     p(n) ≡ (1/4) - (-1/2) + 41 ≡ (1/4) + (2/4) + 41 ≡ (3/4) + 41 ≡ (167)/4 ≡ 0 mod d.
+     ```
+     This means `4 * p(n) ≡ 0 mod d`, but we also know `2n ≡ -1 mod d`, so `4 * p(n) ≡ 0 mod d`.
+     `p(n) ≡ 0 mod d` implies `41` is a solution to the quadratic `(x + 1/2)² - (x + 1/2) + 41 ≡ 0 mod d`, but:
+     If `n ≡ -1/2 mod d`, then `n` is not an integer unless `d` is odd, which is fine.
+
+     However, perhaps `d = 2` is allowed (`n` must be even or `2n + 1` is even, but `2n + 1` is always odd).
+     So `d` must be odd (no `d = 2` is possible).
+
+     Now, `p(n) ≡ 0 mod d` is `(1/4 + 1/2 + 41 ≡ 0 mod d)` (as above), so `167/4 ≡ 0 mod d` (`167 * 4^{-1} ≡ 0 mod d`), which implies that `d` divides `167`.
+
+     Since `167` is prime, `d` must be `1` or `167`.
+
+     So, `g` can have prime divisors `d` (i.e., `d` divides `g`), and these must be `1` or `167`.
+
+     Hence, the only possible primes dividing `g` are `167`. 
+     Therefore, `g` can only be a power of `167`. 
+
+     However, in our case, we also have that `g` divides `2n + 1` and `n² - n + 41`.
+
+     For `n ≤ 40`, `2n + 1 ≤ 81` (`2 * 40 + 1 = 81`), so if `g` divides `2n + 1`, the maximum possible `g` is `81` (if `2n + 1 = 81`).
+
+     But if `g` is `167`, this is `> 81`, so `g` cannot be `167`.
+
+     If `g` is a multiple of `167`, we must have `g = 0`, which is impossible (or perhaps `g ≥ 167`, which cannot divide `2n + 1 ≤ 81`).
+
+     Therefore, the only possibility is `g = 1` (`n ≤ 40` implies `g ≤ 81`).
+
+     In particular, `g ≤ 1` implies `g = 1`, so `gcd(p(n), p(n + 1)) = 1`. 
+
+     However, if `n ≡ 83 mod 167` and `n > 40`, we could have `g ≥ 167` (if `g = 167`). 
+
+     So, the only assumption that might fail is if `n` is not bounded (in particular, in the proof that `g ≤ 81` when `n ≤ 40`, we implicitly assume that `d` must divide `2n + 1 ≤ 81` for `g` to have any prime factors).
+
+     To make this rigorous: if `n ≤ 40`, then `g` must be `≤ 2n + 1 ≤ 81`. Since we showed that all prime divisors of `g` are `167` or `≤` something, the maximum possible is `167`. So, either `g = 167`, or `g` is a power of `167` (but `2 * 40 + 1 = 81 < 167` means no such `n` exists). 
+
+     Hence, if `n ≤ 40`, `g` cannot be a power of `167`, and the only prime divisor possible is `167`, which cannot be `g`.
+
+     So, in fact, `g` must be `1` for `n ≤ 40`.
+
+     Therefore, the condition `g > 1` implies that `n ≥ 41`.
+
+However, in Lean, the hypothesis is `1 < Nat.gcd (p n) (p (n + 1))` (`Nat.gcd` is at least `2`). But for `n ≤ 40`, we have `Nat.gcd (p n) (p (n + 1)) = 1` (`gcd` is `≤ 1` implies it is `1`). 
+
+But we are assuming in Lean that `Nat.gcd (p n) (p (n + 1)) ≥ 2`. So it suffices to show that if `1 ≤ n ≤ 40`, then `Nat.gcd (p n) (p (n + 1)) = 1` (since no `gcd` can be both `≥ 2` and `≤ 1`). 
+
+However, in Lean, the statement is `(1 < Nat.gcd (p n) (p (n + 1))) → (41 ≤ n)`. This is equivalent to proving the contrapositive: `(n < 41) → (Nat.gcd (p n) (p (n + 1)) ≤ 1)`, but since `gcd` is always `≥ 1`, this is `n < 41 → gcd = 1`. 
+
+The approach will be:
+1. Assume `n ≤ 40` (`n < 41`).
+2. Compute `gcd(p(n), p(n + 1)) = gcd(p(n), 2n + 1)` because `gcd(a, b) = gcd(a, b - a)`.
+   - Note that `p(n + 1) - p(n) = 2n + 1`.
+   - Therefore, `gcd(p(n), p(n + 1)) = gcd(p(n), 2n + 1)`.
+3. We know that `p(n)` is `n² - n + 41` and `2n + 1` is `≤ 81` (`n ≤ 40`).
+4. So, `gcd(p(n), 2n + 1)` divides `(2n + 1)`, but `(2n + 1)` is `≤ 81`.
+5. The prime divisors of `gcd(p(n), 2n + 1)` must also divide `p(n)` (`n² - n + 41`).
+6. From above, if `g = gcd(p(n), 2n + 1)` and `g > 1`, then `g` must be a power of `167`, because `g` divides `2n + 1` and `n² - n + 41`, so `g` divides `167`.
+   But `g` divides `2n + 1 ≤ 81`, and `167` is `> 81`. Therefore, `g` cannot be `≥ 167` (`g` must be `1`). 
+
+Alternatively, for `n ≤ 40`, `2n + 1 ≤ 81 < 167`. So `gcd(p(n), 2n + 1) ≤ 2n + 1 ≤ 81 < 167`.
+Hence, `gcd(p(n), p(n + 1)) ≤ 81` (if `n ≤ 40`), and the previous argument that `gcd` can only be `1` (if `n ≤ 40`).
+
+#### Rigorous Conclusion:
+
+We need to prove that if `n ≤ 40` and `n > 0`, then `gcd(p(n), p(n + 1)) = 1`. To do this:
+
+1. For `1 ≤ n ≤ 40`, `gcd(p(n), p(n + 1)) = gcd(p(n), 2n + 1)` because `p(n + 1) - p(n) = 2n + 1`.
+2. Compute `gcd(p(n), 2n + 1)`. Since `p(n) = n² - n + 41` and `2n + 1` is small, check if they have common divisors:
+   - The previous analysis suggests that `gcd(p(n), 2n + 1)` is either `1` or a divisor of `167`.
+   - But `2n + 1 ≤ 81 < 167`, so no common divisor can be `≥ 167`.
+   - Therefore, `gcd(p(n), 2n + 1) = 1` unless `n` is very special (but not in `1 ≤ n ≤ 40`).
+
+But we can be more explicit: if `d > 1` divides `p(n) = n² - n + 41` and `2n + 1`, then `d` divides `4(41) = 164` (since `p( (2n + 1) * k )` can be expanded to find relations).
+Alternatively, express `p(n)` in terms of `(2n + 1)`:
+
+Write `p(n) = n² - n + 41`. We have:
+`n² - n = (n² - n + 41) - 41 = p(n) - 41`. 
+But we can also write `n² - n` as `( (2n + 1)² - 1 )/4 - ( (2n + 1) )/2 = ( (2n + 1)² - 1 - 2(2n + 1) )/4 = (4n² + 4n + 1 - 1 - 4n - 2)/4 = (4n²)/4 = n²`.
+But `n² - n = ( (2n + 1)² - 1 - 2(2n + 1) )/4` seems not directly helpful. 
+
+Another approach is to express `n` in terms of `k = 2n + 1` (`n = (k - 1)/2`), and substitute into `p(n)` to get:
+`p(n) = ( (k - 1)/2 )² - ( (k - 1)/2 ) + 41 = (k² - 2k + 1)/4 - (k - 1)/2 + 41 = (k² - 2k + 1 - 2k + 2 + 164)/4 = (k² - 4k + 167)/4`. 
+
+Now, if `d` divides both `p(n)` and `k = 2n + 1`, then `d` divides `k² - 4k + 167`, because `4 p(n) = k² - 4k + 167`, and `d` divides `p(n)`, so `d` divides `(k² - 4k + 167)` (as `d` divides `4 p(n)` is equivalent to `d` divides `k² - 4k + 167` (but only if `d` is odd))).
+
+But `d` also divides `k = 2n + 1`, so it divides `k² - 4k` (since `k² - 4k = k(k - 4)`). Therefore, `d` divides `k² - 4k + 167 - (k² - 4k) = 167`. 
+
+Hence, `d` must divide `167` (if `d` is odd, since `d` divides both `p(n)` (odd, because `n² - n` is always even and `41` is odd) and `k = 2n + 1` is odd, so `d` is odd).
+
+Therefore, `d` must be `1` or `167`.
+
+However, if `n ≤ 40`, `k ≤ 81` (`k = 2n + 1 ≤ 81`), so `d ≤ k ≤ 81 < 167`, so `d` cannot be `167`. 
+
+But we must also consider the case when `d = 1` or `d > 1`. Since `d` cannot be `167` (if `n ≤ 40`), the only possibility is that `d = 1`.
+
+Thus, for `n ≤ 40`, `gcd(p(n), 2n + 1) = 1`, hence `gcd(p(n), p(n + 1)) = 1`.
+
+But in Lean, the hypothesis is `gcd(p(n), p(n + 1)) > 1`, so if we know that `gcd(p(n), p(n + 1)) ≤ 1` when `n ≤ 40`, we get that `gcd(p(n), p(n + 1)) > 1` cannot happen for `n ≤ 40`. 
+
+In other words, if `gcd(p(n), p(n + 1)) > 1`, then `n > 40` (`n ≥ 41`).
+
+This completes the proof sketch.
+
+### Step-by-Step Abstract Plan
+
+1. **Understand the relationship between `p(n)` and `p(n + 1)`**:
+   - Compute the difference `p(n + 1) - p(n) = 2n + 1`.
+   - This implies that `gcd(p(n), p(n + 1)) = gcd(p(n), 2n + 1)` because `gcd(a, b) = gcd(a, b - a)`.
+
+2. **Relate `p(n)` and `2n + 1` using algebraic manipulation**:
+   - Express `p(n)` in terms of `k = 2n + 1` to get `p(n) = (k² - 4k + 167)/4`.
+   - Deduce that if `d` is a common divisor of `p(n)` and `k`, then `d` divides `167` because `d` divides `p(n)` and `k`, hence `d` divides `k² - 4k + 167` and `k`, and hence `d` divides `167`.
+
+3. **Restrict the possible values of `d`**:
+   - `d` must be `1` or `167` because `167` is prime.
+   - If `n ≤ 40`, then `k = 2n + 1 ≤ 81 < 167`, so `d` cannot be `167`.
+   - Therefore, `d = 1` is the only possible common divisor for `n ≤ 40`.
+
+4. **Conclude that for `n ≤ 40`, `gcd(p(n), p(n + 1)) = 1`**:
+   - This contradicts the hypothesis `gcd(p(n), p(n + 1)) > 1` if `n ≤ 40`.
+
+5. **Final conclusion**:
+   - If `gcd(p(n), p(n + 1)) > 1`, then `n` cannot be `≤ 40`, so `n ≥ 41`.
+
+### Lean 4 Proof Structure with `have` Statements
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : ∀ (n : ℕ), n > 0 → n ≤ 40 → Nat.gcd (p n) (p (n + 1)) = 1 := by sorry
+  have h₃ : n ≥ 41 := by sorry
+  have h₄ : 41 ≤ n := by sorry
+  exact h₄
+```
+
+### Complete Lean 4 Proof
+
+```lean4
+theorem mathd_numbertheory_618 (n : ℕ) (hn : n > 0) (p : ℕ → ℕ) (h₀ : ∀ x, p x = x ^ 2 - x + 41)
+    (h₁ : 1 < Nat.gcd (p n) (p (n + 1))) : 41 ≤ n := by
+  have h₂ : ∀ (n : ℕ), n > 0 → n ≤ 40 → Nat.gcd (p n) (p (n + 1)) = 1 := by
+    intro n hn h_n_le_40
+    have h₃ : p n = n ^ 2 - n + 41 := by
+      rw [h₀]
+    have h₄ : p (n + 1) = (n + 1) ^ 2 - (n + 1) + 41 := by
+      rw [h₀]
+      <;> ring_nf
+    have h₅ : Nat.gcd (p n) (p (n + 1)) = 1 := by
+      rw [h₃, h₄]
+      have h₆ : n ≤ 40 := h_n_le_40
+      have h₇ : n ≥ 1 := by linarith
+      interval_cases n <;> norm_num [Nat.gcd_eq_right, Nat.gcd_eq_left, Nat.gcd_mul_left, Nat.gcd_mul_right, Nat.gcd_assoc]
+      <;> rfl
+    exact h₅
+  
+  have h₃ : n ≥ 41 := by
+    by_contra h
+    have h₄ : n ≤ 40 := by
+      omega
+    have h₅ : Nat.gcd (p n) (p (n + 1)) = 1 := h₂ n hn h₄
+    have h₆ : 1 < Nat.gcd (p n) (p (n + 1)) := h₁
+    linarith
+  
+  have h₄ : 41 ≤ n := by
+    omega
+  
+  exact h₄
+```
+=============================================================
+
+
+
+

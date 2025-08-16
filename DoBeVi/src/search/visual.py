@@ -1,8 +1,10 @@
 from graphviz import Digraph
 from collections import defaultdict
 from typing import List, Optional
-
 from search.search_tree import Node, SolvedNode, InvalidNode, UnsolvedNode,Edge
+import math
+import os
+import json
 
 def split_text(text, max_len=30):
     max_total_len = 3 * max_len
@@ -36,7 +38,7 @@ def visualize_proof_tree(
 
             if isinstance(node, UnsolvedNode):
                 if simple:
-                    label = f"id={node.id}"
+                    label = f"id={node.id},status={node.status}"
                 else:
                     label = f"Internal\nid={node.id}\nscore={node.priority:.2f}"
                 shape = "box"
@@ -105,3 +107,47 @@ def visualize_proof_tree(
         _draw(filename + "_simple", True)
     if "detail" in mode:
         _draw(filename + "_detail", False)
+
+def build_data(
+        node_list: List[Node],
+        success_edge_list: Optional[List['Edge']] = None,
+        dir: str = "./data",
+        filename: str = "proof_search_tree",
+    ):
+
+    if success_edge_list is None:
+        success_edge_list = []
+
+    os.makedirs(dir, exist_ok=True)
+
+    success_data, failure_data = [], []
+
+    for node in node_list:
+        if isinstance(node, UnsolvedNode) and node.out_edges:
+            for edge in node.out_edges:
+                if isinstance(edge.dst, SolvedNode):
+                    dst_info = "no goals"
+                elif isinstance(edge.dst, UnsolvedNode):
+                    dst_info = edge.dst.leandojo_state.pp
+                elif isinstance(edge.dst, InvalidNode):
+                    dst_info = "error"
+                else:
+                    dst_info = f"unknown: {type(edge.dst).__name__}"
+
+                edge_info = {
+                    "before_state": edge.src.leandojo_state.pp,
+                    "after_state": dst_info,
+                    "tactic": edge.tactic,
+                }
+
+                if edge in success_edge_list:
+                    success_data.append(edge_info)
+                else:
+                    failure_data.append(edge_info)
+
+    # 写入 JSON 文件
+    with open(os.path.join(dir, f"{filename}_success.json"), "w", encoding="utf-8") as f:
+        json.dump(success_data, f, indent=2, ensure_ascii=False)
+
+    with open(os.path.join(dir, f"{filename}_failure.json"), "w", encoding="utf-8") as f:
+        json.dump(failure_data, f, indent=2, ensure_ascii=False)
