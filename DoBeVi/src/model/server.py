@@ -18,20 +18,21 @@ from model.generator import (
 )
 from model.value_net import ValueNetwork
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['RAY_DEDUP_LOGS'] = '0' 
 os.environ['RAY_memory_monitor_refresh_ms'] = '0'
 os.environ["VLLM_CONFIGURE_LOGGING"] = '0'
 
 class settings:
-    GENERATOR_TYPE = "DsVllmProofGenerator"
-    ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/model/llm_based_atp"
+    GENERATOR_TYPE = "VllmTacticGenerator"
+    ONE_STEP_MODEL_PATH = "/data0/zjk/LLaMA-Factory/saves/llm_based_atp-8B/full_sft_0818_1630"
+    # ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/model/llm_based_atp"
     # ONE_STEP_MODEL_PATH = "/data0/ljy/hf_home/hub/models--bytedance-research--BFS-Prover/snapshots/8c713e129d05643507aed4948635f81f5dc2d746/"
     # WHOLE_PROOF_MODEL_PATH = "/data0/xs/LLM-ATP/model/kimina-prover-preview-distill-7b"
     WHOLE_PROOF_MODEL_PATH = "/data0/xs/LLM-ATP/model/Goedel-Prover-V2-8B"
     VALUE_NETWORK_MODEL_PATH = "internlm/internlm2_5-step-prover-critic"
-    NUM_GPUS = 1
+    NUM_GPUS = 4
     HOST = "0.0.0.0"
     PORT = 8000
     LOG_LEVEL = "info"
