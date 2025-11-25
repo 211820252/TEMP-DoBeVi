@@ -2,6 +2,21 @@ data/
 .vscode/
 log/
 ckpt/
+ray_tmp/
+DoBeVi/results
+analyze_results.py
+analyze_single_result.py
+deal.py
+debug.txt
+difficulty_minif2f.txt
+output_stats1104_1400_minif2f.json
+single_result_analyze_best1.json
+single_result_analyze_depth1.json
+single_result_analyze_depth2.json
+single_result_analyze_length1.json
+single_result_analyze_length2.json
+test.py
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
