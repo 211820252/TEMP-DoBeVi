@@ -1,6 +1,6 @@
 import os
-os.environ['RAY_TEMP_DIR'] = '/data0/zjk/ATP/TEMP-DoBeVi/ray_cache'
-os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"
+os.environ['RAY_TEMP_DIR'] = '/data0/xs/LLM-ATP/TEMP-DoBeVi/ray_tmp'
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"  # Specify which GPUs to use
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['RAY_DEDUP_LOGS'] = '0' 
 os.environ['RAY_memory_monitor_refresh_ms'] = '0'
@@ -26,6 +26,8 @@ from utils import (
     get_stats,
 )
 
+__DEBUG__ = False
+
 def evaluate(
     repo_path: str,
     file_paths: List[str],
@@ -41,12 +43,40 @@ def evaluate(
     # generate theorems
     repo = TracedRepo(repo_path)
     theorems = []
+    debug_theorems = [
+        # "mathd_numbertheory_233",
+        # "amc12_2000_p20",
+        # "amc12a_2021_p18",
+        # "aime_1983_p1",
+        # "amc12b_2020_p6",
+        # "mathd_algebra_114",
+        # "mathd_algebra_209",
+        # "imo_1960_p2",
+        # "mathd_algebra_208",
+        # "mathd_numbertheory_321",
+        # "mathd_algebra_392",
+        # "imo_1962_p2",
+        # "mathd_algebra_215",
+        # "mathd_numbertheory_227",
+        # "mathd_algebra_362",
+        # "mathd_numbertheory_314",
+        # "induction_pprime_pdvdapowpma",
+        # "mathd_algebra_598",
+        # "mathd_numbertheory_5",
+        # "mathd_numbertheory_296",
+        # "mathd_numbertheory_711",
+        # "numbertheory_aoddbdiv4asqpbsqmod8eq1",
+        # "mathd_numbertheory_541",
+        # "induction_nfactltnexpnm1ngt3"
+    ]
     for file_path in tqdm(file_paths, desc="Extracting theorems"):
         theorems_dict = repo.get_traced_theorems_from_file(file_path, True)
         for thm_name, thms in theorems_dict.items():
-            theorems.extend(thms)
+            if not __DEBUG__ or thm_name in debug_theorems:
+                theorems.extend(thms)
     # for thm in theorems:
     #     print(f"\"{thm.name}\",")
+
     result_save_path = result_save_path + "/" + f"results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     # create prover scheduler and search

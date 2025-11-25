@@ -12,6 +12,8 @@ from search.mcts_algo import MCTSProver
 from search.deepseek_algo import DeepSeekProver
 from search.kimina_wholeproof_algo import KiminaWholeproofProver
 from search.ds_wholeproof_algo import DsWholeproofProver
+from search.have_algo import HaveProver
+from search.qwen_algo import QwenProver
 
 def get_num_gpus(cuda_visible_devices: str) -> int:
     return len(cuda_visible_devices.split(","))
@@ -33,10 +35,14 @@ def get_prover_clazz(algo_str: str):
         return ValueNetProver
     elif algo_str == "deepseek":
         return DeepSeekProver
+    elif algo_str == "have":
+        return HaveProver
     elif algo_str == "kimina_wholeproof":
         return KiminaWholeproofProver
     elif algo_str == "ds_wholeproof":
         return DsWholeproofProver
+    elif algo_str == "qwen":    
+        return QwenProver
     else:
         raise ValueError(f"Invalid algorithm: {algo_str}")
 

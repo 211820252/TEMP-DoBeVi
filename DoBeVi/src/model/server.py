@@ -18,30 +18,44 @@ from model.generator import (
 )
 from model.value_net import ValueNetwork
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3"  # Specify which GPUs to use
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 os.environ['RAY_DEDUP_LOGS'] = '0' 
 os.environ['RAY_memory_monitor_refresh_ms'] = '0'
 os.environ["VLLM_CONFIGURE_LOGGING"] = '0'
+# os.environ['VLLM_ATTENTION_BACKEND'] = 'FLASH_ATTN'
+# os.environ['VLLM_USE_V1'] = '1'
+# os.environ['VLLM_ATTENTION_BACKEND'] = 'XFORMERS'
 
 class settings:
-    GENERATOR_TYPE = "DsVllmProofGenerator"
-    ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/model/llm_based_atp"
+    GENERATOR_TYPE = "VllmTacticGenerator"
+    # ONE_STEP_MODEL_PATH = "/data1/xs/ckpt/atp/ckpt9000"
+    # ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/LLaMA-Factory/saves/llm_based_atp-8B/full_sft_0831_2030"
+    ONE_STEP_MODEL_PATH = "/data1/xs/ATP/train_model/sft_filter_leakage_100_seg_stp_1121"
+    # ONE_STEP_MODEL_PATH = "/data1/xs/ATP/train_model/grpo_dobevi_1112/merged_hf_model/"
+    # ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/model/llm_based_atp/"
+    # ONE_STEP_MODEL_PATH = "/data1/zjk/models/sft_58w_of_8G_ours_1119/"
     # ONE_STEP_MODEL_PATH = "/data0/ljy/hf_home/hub/models--bytedance-research--BFS-Prover/snapshots/8c713e129d05643507aed4948635f81f5dc2d746/"
     # WHOLE_PROOF_MODEL_PATH = "/data0/xs/LLM-ATP/model/kimina-prover-preview-distill-7b"
     WHOLE_PROOF_MODEL_PATH = "/data0/xs/LLM-ATP/model/Goedel-Prover-V2-8B"
+    # for HAVE model
+    HAVE_ONE_STEP_MODEL_PATH = "/data0/xs/LLM-ATP/LLaMA-Factory/saves/llm_based_atp-8B/full_sft_0903_0930"
+    # for value network
     VALUE_NETWORK_MODEL_PATH = "internlm/internlm2_5-step-prover-critic"
-    NUM_GPUS = 1
+    NUM_GPUS = 4
     HOST = "0.0.0.0"
-    PORT = 8000
+    PORT = 8002
     LOG_LEVEL = "info"
     USE_VALUE_NETWORK = False
-    RAY_TEMP_DIR = "/data0/zjk/ATP/TEMP-DoBeVi/server_ray_cache"
+    TEST_HAVE_MODEL = False
+    RAY_TEMP_DIR = "/data0/xs/LLM-ATP/TEMP-DoBeVi/ray_tmp"
 
 ray.init(_temp_dir=settings.RAY_TEMP_DIR)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # print(f"当前的attn实现为: {os.getenv('VLLM_ATTENTION_BACKEND')}")
+
     if settings.USE_VALUE_NETWORK:
         app.state.value_network = ValueNetwork.remote(
             model_path=settings.VALUE_NETWORK_MODEL_PATH,
@@ -49,6 +63,15 @@ async def lifespan(app: FastAPI):
         )
         app.state.value_network_lock = asyncio.Lock()
     
+    if settings.TEST_HAVE_MODEL:
+        app.state.have_generator = VllmTacticGenerator.remote(
+            model_path=settings.HAVE_ONE_STEP_MODEL_PATH,
+            length_penalty=1.0,
+            max_length=4096,
+            gpu_id=-1
+        )
+        app.state.have_generator_lock = asyncio.Lock()
+
     if settings.GENERATOR_TYPE == "HuggingFaceTacticGenerator":
         app.state.generators = [
             HuggingFaceTacticGenerator.remote(
@@ -69,6 +92,7 @@ async def lifespan(app: FastAPI):
             )
             for i in range(settings.NUM_GPUS)
         ]
+        print(F"Using VllmTacticGenerator:{settings.ONE_STEP_MODEL_PATH}")
     elif settings.GENERATOR_TYPE == "InternlmVllmTacticGenerator":
         app.state.generators = [
             InternlmVllmTacticGenerator.remote(
@@ -84,7 +108,7 @@ async def lifespan(app: FastAPI):
             DsVllmProofGenerator.remote(
                 model_path=settings.WHOLE_PROOF_MODEL_PATH,
                 length_penalty=1.0,
-                max_length=32768,
+                max_length=8192,
                 gpu_id=i,
             )
             for i in range(settings.NUM_GPUS)
@@ -94,7 +118,7 @@ async def lifespan(app: FastAPI):
             KiminaVllmProofGenerator.remote(
                 model_path=settings.WHOLE_PROOF_MODEL_PATH,
                 length_penalty=1.0,
-                max_length=4096,
+                max_length=8192,
                 gpu_id=i,
             )
             for i in range(settings.NUM_GPUS)
@@ -153,8 +177,13 @@ async def generate_tactic(request_body: GenerateTacticRequestBody):
 @app.post("/generate_tactic_sampling")
 async def generate_tactic_sampling(request_body: GenerateTacticRequestBody):
     try:
-        generator = app.state.generators[request_body.gpu_id]
-        lock = app.state.generator_locks[request_body.gpu_id]
+        gpu_id = request_body.gpu_id
+        if gpu_id == -1:
+            generator = app.state.have_generator
+            lock = app.state.have_generator_lock
+        else:
+            generator = app.state.generators[gpu_id]
+            lock = app.state.generator_locks[gpu_id]
 
         async with lock:
             suggestions = await generator.generate_sampling.remote(

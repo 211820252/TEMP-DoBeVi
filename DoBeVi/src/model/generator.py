@@ -11,7 +11,7 @@ import os
 import sys
 import json
 from contextlib import redirect_stdout
-
+from vllm.sampling_params import GuidedDecodingParams
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -227,28 +227,95 @@ class VllmTacticGenerator(TacticGenerator):
         state: str,
         num_samples: int,
     ) -> List[Tuple[str, float]]:
+        if self.gpu_id == -1:
+            num_have_samples: int = 0 # 控制生成以 "have" 开头的样本数量
+            num_no_have_samples: int = 0  # 控制生成不以 "have" 开头的样本数量
+            num_unconstrained_samples: int = num_samples - num_have_samples - num_no_have_samples  # 控制生成无约束的样本数量
+        else:
+            num_have_samples: int = 0  # 控制生成以 "have" 开头的样本数量
+            num_no_have_samples: int = 0  # 控制生成不以 "have" 开头的样本数量
+            num_unconstrained_samples: int = num_samples - num_have_samples - num_no_have_samples  # 控制生成无约束的样本数量
+
+        if num_have_samples is None:
+            num_have_samples = num_samples // 3
+        if num_no_have_samples is None:
+            num_no_have_samples = num_samples // 3
+        if num_unconstrained_samples is None:
+            num_unconstrained_samples = num_samples - num_have_samples - num_no_have_samples
+
+        # Prepare inputs for the model
         inputs = self.tokenizer(state, return_tensors="pt", truncation=True).to("cuda")
         if inputs["input_ids"].size(1) > self.max_length:
             return []
-        
-        gen_params = SamplingParams(
-            n=num_samples,
-            temperature=1.1,
-            top_k=50,
-            top_p=0.95,
-            repetition_penalty=1.1,
-            max_tokens=128,
-            logprobs=0,
-        )
 
-        async for output in self.engine.generate(state, gen_params, request_id=str(uuid.uuid4().hex)):
-            final_output = output
-        output = final_output
-        if not isinstance(output, RequestOutput):
-            raise ValueError(f"Expected RequestOutput, got {type(output)}")
+        # GuidedDecodingParams for three types of generation
+        guided_decoding_no_have = GuidedDecodingParams(regex=r'^(?:[^h].*|h[^a].*|ha[^v].*|hav[^e].*|h|ha|hav)$')
+        guided_decoding_have = GuidedDecodingParams(regex=r"^have.*")
+
         
-        suggestions = [(o.text.strip().strip("\n"), o.cumulative_logprob or 0.0) for o in output.outputs]
-        return suggestions
+        # Prepare SamplingParams for three types of generation and generate three types of samples
+        all_suggestions = []
+
+        if num_no_have_samples and num_no_have_samples > 0:
+            gen_params_no_have = SamplingParams(
+                n=num_no_have_samples,
+                temperature=1.1,
+                top_k=50,
+                top_p=0.95,
+                repetition_penalty=1.1,
+                max_tokens=2048,
+                logprobs=0,
+                stop=['<|im_end|>',],
+                guided_decoding=guided_decoding_no_have
+            )
+            async for output in self.engine.generate(state, gen_params_no_have, request_id=str(uuid.uuid4().hex)):
+                final_output = output
+            if not isinstance(final_output, RequestOutput):
+                raise ValueError(f"Expected RequestOutput, got {type(final_output)}")
+            suggestions_no_have = [(o.text.strip().strip("\n"), o.cumulative_logprob or 0.0) for o in final_output.outputs]
+            all_suggestions.extend(suggestions_no_have)
+
+        if num_have_samples and num_have_samples > 0:
+            gen_params_have = SamplingParams(
+                n=num_have_samples,
+                temperature=1.1,
+                top_k=50,
+                top_p=0.95,
+                repetition_penalty=1.1,
+                max_tokens=2048,
+                logprobs=0,
+                stop=['<|im_end|>',],
+                guided_decoding=guided_decoding_have
+            )
+            async for output in self.engine.generate(state, gen_params_have, request_id=str(uuid.uuid4().hex)):
+                final_output = output
+            if not isinstance(final_output, RequestOutput):
+                raise ValueError(f"Expected RequestOutput, got {type(final_output)}")
+            suggestions_have = [(o.text.strip().strip("\n"), o.cumulative_logprob or 0.0) for o in final_output.outputs]
+            all_suggestions.extend(suggestions_have)
+
+        if num_unconstrained_samples and num_unconstrained_samples > 0:
+            gen_params_unconstrained = SamplingParams(
+                n=num_unconstrained_samples,
+                temperature=1.1,
+                top_k=50,
+                top_p=0.95,
+                repetition_penalty=1.1,
+                max_tokens=2048,
+                logprobs=0,
+                stop=['<|im_end|>',],
+                # guided_decoding=None  # No restriction
+            )
+
+            async for output in self.engine.generate(state, gen_params_unconstrained, request_id=str(uuid.uuid4().hex)):
+                final_output = output
+            
+            if not isinstance(final_output, RequestOutput):
+                raise ValueError(f"Expected RequestOutput, got {type(final_output)}")
+            suggestions_unconstrained = [(o.text.strip().strip("\n"), o.cumulative_logprob or 0.0) for o in final_output.outputs]
+            all_suggestions.extend(suggestions_unconstrained)
+
+        return all_suggestions
     
     # async def _run_query(
     #     self,
@@ -920,7 +987,7 @@ class DsVllmProofGenerator(ProofGenerator):
             top_k=50,
             top_p = 0.95,
             # repetition_penalty=1.1,
-            max_tokens=32768,
+            max_tokens=8192,
         )
 
         text = self.tokenizer.apply_chat_template(

@@ -157,10 +157,9 @@ class ProverActor:
                 logging.error(
                     f"🚨[Actor {self.actor_id}] unexpected error in search({thm.name!r})"
                 )
-
             try:
                 result = await asyncio.wait_for(
-                    self.prover.get_result(),
+                    self.prover.get_result(False),
                     timeout=600
                 )
             except (asyncio.TimeoutError, asyncio.CancelledError) as e:
@@ -173,7 +172,6 @@ class ProverActor:
                     f"🚨[Actor {self.actor_id}] encountered a error while retrieving the search result for theorem '{thm.name}': {e}"
                 )
                 result = None
-
             try:
                 output_queue.put(result)
             except Exception:
@@ -181,7 +179,7 @@ class ProverActor:
 
 os.environ.pop('http_proxy', None)
 
-client = GeneratorClient(base_url="http://localhost:8000")
+client = GeneratorClient(base_url="http://localhost:8002")
 
 class ProverScheduler:
     def __init__(
@@ -260,14 +258,27 @@ class ProverScheduler:
         ]
 
         # monitor the progress
-        pbar = tqdm(total=len(theorems))
+        total_num = len(theorems)
+        self.success_num = 0
+        self.failed_num = 0
+        self.discarded_num = 0
+        pbar = tqdm(total=total_num)
         async def monitor():
-            while len(self.results) < len(theorems):
+            while len(self.results) < total_num:
                 try:
                     result = output_queue.get()
                 except Exception as e:
                     logging.error(f"🚨{type(e).__name__}: {e}")
                     result = None
+                if result is None:
+                    self.discarded_num += 1
+                elif result.status == Status.SOLVED:
+                    self.success_num += 1
+                else:       
+                    self.failed_num += 1
+                logging.error(
+                    f"✅Solved: {self.success_num}, ❌Failed: {self.failed_num}, 🗑️Discarded: {self.discarded_num}, 📜Total: {total_num}"
+                )
                 self.results.append(result)
                 pbar.update(1)
             pbar.close()

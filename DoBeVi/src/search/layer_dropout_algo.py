@@ -262,6 +262,7 @@ class LayerDropoutProver(Prover):
         search_node: UnsolvedNode,
     ) -> str:
         input_template = "[GOAL]\n{state}\n[PROOFSTEP]\n"
+        # input_template = "{state}:::"
         return input_template.format(state=search_node.leandojo_state.pp)
     
     def _normalize_scores(

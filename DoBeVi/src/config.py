@@ -46,8 +46,10 @@ class Settings(BaseSettings):
             'mcts', 
             'value_net', 
             'deepseek', 
+            'have',
             'kimina_wholeproof', 
-            'ds_wholeproof'
+            'ds_wholeproof',
+            'qwen'
         ]
         if v in allowed:
             return v

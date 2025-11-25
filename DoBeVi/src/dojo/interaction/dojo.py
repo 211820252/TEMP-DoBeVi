@@ -130,7 +130,7 @@ class Dojo:
             prefix=traced_theorem.path.stem,
             suffix=traced_theorem.path.suffix,
             dir=traced_theorem.abs_path.parent / "temp_files",
-            delete=True,
+            delete=False,
         ).__enter__()     
         # logger.info(f"Modifying `{traced_theorem.path}` into `{self.modified_file.name}`")
         proof_start, proof_end = traced_theorem.locate_proof()
@@ -161,55 +161,68 @@ class Dojo:
         self.modified_file.write(modified_code)
         self.modified_file.flush()
     
+    # def _set_modified_file_by_code(self, code: str, theorem_name: Optional[str] = None) -> None:
+    #     os.makedirs(self.root_dir / "temp_files")
+    #     self.modified_file = tempfile.NamedTemporaryFile(
+    #         "wt",
+    #         prefix="tmp_thm",
+    #         suffix=".lean",
+    #         dir=self.root_dir / "temp_files",
+    #         delete=False,
+    #     ).__enter__()
+    #     matches = list(BLOCK_RE.finditer(code))
+    #     if not matches:
+    #         raise DojoInitError(f"No theorem blocks matched the expected format.")
+    #     if theorem_name is None:
+    #         target_match = matches[-1]
+    #     else:
+    #         target_match = next(
+    #             (m for m in matches if m.group('name') == theorem_name),
+    #             None
+    #         )
+    #         if target_match is None:
+    #             raise DojoInitError(f"No theorem named '{theorem_name}' was found.")
+    #     out, last_end = [], 0
+    #     for m in matches:
+    #         if m != target_match:                          
+    #             out.append(code[last_end:m.start()])
+    #         else:
+    #             before = code[last_end:m.start()]
+    #             needs_opt = (
+    #                 before.rstrip().splitlines()[-1:]
+    #                 != ["set_option maxHeartbeats 0 in"]
+    #             )
+    #             block_text = m.group('block')
+    #             indent = re.search(r"\n([ \t]*)\bsorry\b", block_text)
+    #             indent = indent.group(1) if indent else "  "
+    #             patched_block = re.sub(
+    #                 r"([ \t]*)\bsorry\b",
+    #                 rf"\n{indent}lean_dojo_repl\n{indent}sorry",
+    #                 block_text,
+    #                 count=1
+    #             )
+    #             if needs_opt:
+    #                 patched_block = "set_option maxHeartbeats 0 in\n" + patched_block
+    #             out.append(before + patched_block)
+    #         last_end = m.end()
+
+    #     out.append(code[last_end:])
+    #     modified_code = "import Lean4Repl\n" + re.sub(r"\n{3,}", "\n\n", "".join(out)).strip() + "\n"
+    #     self.modified_file.write(modified_code)
+    #     self.modified_file.flush()
+
     def _set_modified_file_by_code(self, code: str, theorem_name: Optional[str] = None) -> None:
-        os.makedirs(self.root_dir / "temp_files")
+        os.makedirs(self.root_dir / "temp_files", exist_ok=True)
         self.modified_file = tempfile.NamedTemporaryFile(
             "wt",
-            prefix="tmp_thm",
+            prefix='tmp_thm',
             suffix=".lean",
             dir=self.root_dir / "temp_files",
-            delete=True,
-        ).__enter__()
-        matches = list(BLOCK_RE.finditer(code))
-        if not matches:
-            raise DojoInitError(f"No theorem blocks matched the expected format.")
-        if theorem_name is None:
-            target_match = matches[-1]
-        else:
-            target_match = next(
-                (m for m in matches if m.group('name') == theorem_name),
-                None
-            )
-            if target_match is None:
-                raise DojoInitError(f"No theorem named '{theorem_name}' was found.")
-        out, last_end = [], 0
-        for m in matches:
-            if m != target_match:                          
-                out.append(code[last_end:m.start()])
-            else:
-                before = code[last_end:m.start()]
-                needs_opt = (
-                    before.rstrip().splitlines()[-1:]
-                    != ["set_option maxHeartbeats 0 in"]
-                )
-                block_text = m.group('block')
-                indent = re.search(r"\n([ \t]*)\bsorry\b", block_text)
-                indent = indent.group(1) if indent else "  "
-                patched_block = re.sub(
-                    r"([ \t]*)\bsorry\b",
-                    rf"\n{indent}lean_dojo_repl\n{indent}sorry",
-                    block_text,
-                    count=1
-                )
-                if needs_opt:
-                    patched_block = "set_option maxHeartbeats 0 in\n" + patched_block
-                out.append(before + patched_block)
-            last_end = m.end()
-
-        out.append(code[last_end:])
-        modified_code = "import Lean4Repl\n" + re.sub(r"\n{3,}", "\n\n", "".join(out)).strip() + "\n"
-        self.modified_file.write(modified_code)
+            delete=False,
+        )
+        self.modified_file.write(code)
         self.modified_file.flush()
+        self.modified_file.close()
 
     def spawn_pexpect(self) -> None:
         with working_directory(self.root_dir):
@@ -439,8 +452,15 @@ class Dojo:
             kill_descendants(self.proc.pid)
             self.proc = None
         if self.modified_file:
-            self.modified_file.__exit__(exc_type, exc_val, exc_tb)
-            self.modified_file = None
+            try:
+                path = Path(self.modified_file.name)
+                self.modified_file.close()
+                if path.exists():
+                    path.unlink()
+            except Exception as e:
+                pass
+            finally:
+                self.modified_file = None
         self.entry = None
         self.interaction_path.clear()
         self.states.clear()
